@@ -1,7 +1,9 @@
 package utils
 
 object gameScreen {
-  var screenName: String = "windowName"
+  var windowName: String = "windowNameTemp"
+  var windowId: String = "99999"
+//  var windowImage: Mat
 
   // inventory
   var equipmentLoc: Map[String, Option[(Int, Int)]] = Map(
@@ -18,8 +20,12 @@ object gameScreen {
     "bootsLoc" -> None
   )
 
-  def setScreenName(value: String): Unit = {
-    screenName = value
+
+  def setWindowName(value: String): Unit = {
+    windowName = value
+  }
+  def setWindowId(value: String): Unit = {
+    windowId = value
   }
 
   // inventory location
@@ -30,5 +36,6 @@ object gameScreen {
   def getEquipment(eqSetting: String): Option[(Int, Int)] = {
     equipmentLoc.getOrElse(eqSetting, throw new IllegalArgumentException("Invalid equipment setting"))
   }
+
 
 }

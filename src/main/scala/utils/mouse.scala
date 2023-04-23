@@ -13,12 +13,19 @@ object mouse {
     robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
     robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
     }
-
-    def rightClick(x: Int, y: Int): Unit = {
-    robot.mouseMove(x, y)
-    robot.mousePress(InputEvent.BUTTON3_DOWN_MASK)
-    robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
+  def rightClick(loc: Option[(Int, Int)]): Unit = {
+    loc.foreach { case (x, y) =>
+      robot.mouseMove(x, y)
+      robot.mousePress(InputEvent.BUTTON3_DOWN_MASK)
+      robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
     }
+  }
+
+//    def rightClick(x: Int, y: Int): Unit = {
+//      robot.mouseMove(x, y)
+//      robot.mousePress(InputEvent.BUTTON3_DOWN_MASK)
+//      robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
+//    }
 
     def mouseMove(loc: Option[(Int, Int)]): Unit = {
       val (x, y) = loc.get

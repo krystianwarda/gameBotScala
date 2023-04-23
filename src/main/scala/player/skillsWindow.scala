@@ -6,7 +6,7 @@ import utils.image.{loadImage, saveMatAsPng}
 
 import java.io.File
 //val mainImg: Mat = loadImage("numbertest.png")
-object battle {
+object skillsWindow {
 
   def createRectangle(loc: Option[(Int, Int)]): Option[(Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)])] = {
     val fixedX = 120 // fixed number to add to x value of loc
@@ -25,10 +25,11 @@ object battle {
     }
   }
 
-  def numberDetection(mainImg: Mat): Int = {
+
+    def numberDetection(mainImg: Mat): Int = {
     // Load main image and single digit images
-    val digitPath = "images/battle/numbers"
-    val digitFiles = new File(digitPath).listFiles.filter(_.getName.endsWith(".png"))
+    val digitPath = "images/skillsWindow/numbers"
+    val digitFiles = new File(digitPath).listFiles.filter(f => f.getName.matches("^[0-9][r]*\\.png$"))
     val digits: Map[String, Mat] = digitFiles.map(f => (f.getName.dropRight(4), loadImage(f.getAbsolutePath))).toMap
 
     // Define confidence threshold for matching
@@ -65,7 +66,19 @@ object battle {
         lastCol = col
       }
     }
-//    println(s"Digits found: $digitsFound")
+
+    // Remove "r" symbols if they exist in the digitsFound string
+    digitsFound = digitsFound.filterNot(_ == 'r')
+
+    // Convert the digitsFound string to an integer
+    try {
+      digitsFound.toInt
+    } catch {
+      case e: NumberFormatException =>
+        println(s"Error converting $digitsFound to integer: ${e.getMessage}")
+        0
+    }
     digitsFound.toInt
   }
+
 }

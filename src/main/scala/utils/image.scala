@@ -171,7 +171,7 @@ object image {
   }
 
 
-  def getLocationFromImage3(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
+  def getLocationFromImageMid(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
     // Convert images to HSV format
     val tempImageHSV = new Mat()
     val mainImageHSV = new Mat()
@@ -198,6 +198,40 @@ object image {
       None
     }
   }
+
+  def foodDetection(mainImg: Mat): Option[(Int, Int)] = {
+
+    // Load the food images
+    val foodFiles = new File("images/food").listFiles.filter(f => f.getName.matches(".*\\.png$"))
+    val foods: Seq[Mat] = foodFiles.map(f => loadImage(f.getAbsolutePath))
+
+    // Define confidence threshold for matching
+    val confidence: Double = 0.9
+
+    // Loop through all food images and find matches in the main image
+    for (food <- foods) {
+      val matchMat: Mat = new Mat()
+      Imgproc.matchTemplate(mainImg, food, matchMat, Imgproc.TM_CCOEFF_NORMED)
+
+      val locations = for {
+        row <- 0 until matchMat.rows
+        col <- 0 until matchMat.cols
+        if matchMat.get(row, col)(0) >= confidence
+      } yield (col + food.cols / 2, row + food.rows / 2)
+
+      if (locations.nonEmpty) {
+        // Return the location of the center of the matched area
+        val (xSum, ySum) = locations.reduce((a, b) => (a._1 + b._1, a._2 + b._2))
+        val centerX = (xSum / locations.length).toInt
+        val centerY = (ySum / locations.length).toInt
+        return Some((centerX, centerY))
+      }
+    }
+    println("No food found")
+    None
+  }
+
+
 
   def getLocationFromImage2(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
     // Apply thresholding to each channel separately

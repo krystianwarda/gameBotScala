@@ -20,36 +20,40 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import org.opencv.objdetect.CascadeClassifier
 import org.opencv.core.CvType
-import utils.image.loadOpenCVSettings
-import utils.image.{makeScreenshot, refreshWindow}
+import utils.image.{loadImage, loadOpenCVSettings, makeScreenshot, refreshWindow}
 import player.Player
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import credentials._
+import player.Player.{eatFood, foodStatus}
 import player.core.checkSkills
-import utils.keyboard.{sendText}
+import utils.core.{getCurrentTimestamp, getWindowId, maximizeWindow}
+import utils.keyboard.sendText
+import utils.gameScreen
+//import player.Spells
 
 object Main {
   def main(args: Array[String]): Unit = {
     loadOpenCVSettings()
+    gameScreen.setWindowName(windowName)
+    gameScreen.setWindowId(getWindowId(windowName))
 
     val captureInterval = 1000 // capture interval in milliseconds
 //    val cascadeClassifier = new CascadeClassifier("path/to/your/cascade/classifier.xml") // path to your cascade classifier file
 //    val scaleFactor = 1.2 // scale factor for object detection
 //    val minNeighbors = 3 // minimum number of neighbors for object detection
     makeScreenshot(windowName)
-    checkSkills()
+
+
     while (true) {
-      refreshWindow(windowName)
-      if (Player.manaPoints > 300) {
-        sendText("adori vis")
-        Thread.sleep(2000)
-      }
+      maximizeWindow(gameScreen.windowId)
+      makeScreenshot(windowName)
+      checkSkills()
+      println(Player.manaPoints)
 
+      foodStatus(loadImage("window.png"))
+      if (Player.manaPoints > 500) {Spells.castSpellMultiple("adura vita", 3)}
 
-
-      Thread.sleep(captureInterval)
     }
-
   }
-
 }
