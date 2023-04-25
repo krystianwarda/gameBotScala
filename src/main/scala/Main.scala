@@ -21,11 +21,11 @@ import org.opencv.imgproc.Imgproc
 import org.opencv.objdetect.CascadeClassifier
 import org.opencv.core.CvType
 import utils.image.{loadImage, loadOpenCVSettings, makeScreenshot, refreshWindow}
-import player.Player
+import player.Player2
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import credentials._
-import player.Player.{eatFood, foodStatus}
+import player.Player2.{eatFood, foodStatus}
 import player.core.checkSkills
 import utils.core.{getCurrentTimestamp, getWindowId, maximizeWindow}
 import utils.keyboard.sendText
@@ -49,10 +49,10 @@ object Main {
       maximizeWindow(gameScreen.windowId)
       makeScreenshot(windowName)
       checkSkills()
-      println(Player.manaPoints)
+      println(Player2.manaPoints)
 
       foodStatus(loadImage("window.png"))
-      if (Player.manaPoints > 500) {Spells.castSpellMultiple("adura vita", 3)}
+      if (Player2.manaPoints > 40) {Spells.castSpellMultiple("exura", 1)}
 
     }
   }

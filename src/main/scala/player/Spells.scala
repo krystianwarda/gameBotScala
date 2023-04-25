@@ -3,9 +3,9 @@
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 import utils.image.loadImage
-import player.Player._
+import player.Player2._
 import utils.keyboard.sendText
-import utils.core.{randomSleep}
+import utils.core.randomSleep
 import java.io.File
 
 object Spells {

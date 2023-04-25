@@ -23,8 +23,37 @@ import scala.concurrent.duration._
 import scala.sys.process.stringSeqToProcess
 import utils.gameScreen._
 import utils.gameScreen
+import java.awt.Robot
+import java.awt.event.InputEvent
 
 object core {
+
+    def detectPlayerWindows(windowNameSubstring: String): List[PlayerWindow] = {
+        // Search for windows that match the window name substring
+        val searchCommand = Seq("xdotool", "search", "--name", windowNameSubstring)
+        val searchProcess = new ProcessBuilder(searchCommand.toList.asJava).start()
+        val windowIDs = Source.fromInputStream(searchProcess.getInputStream()).getLines().toList
+
+        // Extract character names and create PlayerWindow objects
+        windowIDs.map { windowID =>
+            maximizeWindow(windowID)
+            Thread.sleep(500)
+            val windowTitle = Seq("xdotool", "getwindowname", windowID).!!.trim
+            val characterName = windowTitle.split(" - ")(1).replaceAll("\\s", "_")
+            PlayerWindow(windowID.toInt, characterName)
+        }
+    }
+    def detectWindows(windowName: String): List[String] = {
+        // Window name
+        val windowSubstring = windowName
+
+        // Search for windows that match the window name substring
+        val searchCommand = Seq("xdotool", "search", "--name", windowSubstring)
+        val searchProcess = new ProcessBuilder(searchCommand.toList.asJava).start()
+        val windowIDs = Source.fromInputStream(searchProcess.getInputStream()).getLines().toList
+
+        windowIDs
+    }
 
     def getCurrentTimestamp: Long = System.currentTimeMillis / 1000
         // Instant.now().getEpochSecond
@@ -112,6 +141,7 @@ object core {
 //        val maxProcess = new ProcessBuilder(maxCommand.toList.asJava).start()
 //        Await.result(Future(maxProcess.waitFor()), 10.seconds)
 //    }
+
 
 
     def testMove(windowName: String): Unit = {

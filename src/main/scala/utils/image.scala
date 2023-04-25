@@ -2,11 +2,13 @@ package utils
 import java.util.ArrayList
 import org.bytedeco.javacpp.Loader
 import net.sourceforge.tess4j.Tesseract
+
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import org.opencv.core.{Mat, MatOfPoint2f, Point, Rect}
 import org.opencv.imgproc.Imgproc
+import scala.sys.process.stringSeqToProcess
 import java.awt.image.{BufferedImage, DataBufferByte}
 import javax.imageio.ImageIO
 import org.opencv.core.{Core, CvType, Mat, MatOfPoint2f, Point, Rect, Scalar}
@@ -16,6 +18,7 @@ import org.opencv.imgproc.Imgproc
 import org.opencv.core.Core.MinMaxLocResult
 import org.opencv.imgcodecs.Imgcodecs
 
+import scala.collection.mutable.ListBuffer
 import java.lang.System.setProperty
 import java.awt.{Desktop, Robot, Toolkit}
 import java.awt.event.InputEvent
@@ -51,6 +54,7 @@ import org.bytedeco.javacpp._
 
 import java.io.File
 import org.apache.commons.io.FilenameUtils
+import utils.core.maximizeWindow
 import utils.mouse.mouseMoveSmooth
 
 object image {
@@ -169,6 +173,125 @@ object image {
       None
     }
   }
+  def getSideFromFilename(imageString: String): String = {
+    if (imageString.contains("bottom")) {
+      "bottom"
+    } else if (imageString.contains("left")) {
+      "left"
+    } else if (imageString.contains("top")) {
+      "top"
+    } else if (imageString.contains("right")) {
+      "right"
+    } else {
+      "Unknown side"
+    }
+  }
+
+  def getCenterPoint(locations: List[Option[(Int, Int)]]): Option[(Int, Int)] = {
+    val validLocations = locations.flatten
+    if (validLocations.size == 4) {
+      val bottom = validLocations(0)._2
+      val left = validLocations(1)._1
+      val top = validLocations(2)._2
+      val right = validLocations(3)._1
+      val centerX = (left + right) / 2
+      val centerY = (top + bottom) / 2
+      Some((centerX, centerY))
+    } else {
+      None
+    }
+  }
+
+  def getCenterLoc(mainImage: Mat): Option[(Int, Int)] = {
+    val stringList = List("bottomGameWindow", "leftGameWindow", "topGameWindow", "rightGameWindow")
+    var locations = ListBuffer.empty[Option[(Int, Int)]]
+    for (str <- stringList) {
+      val tempImage = loadImage(s"images/screenInfo/$str.png")
+      val tempLoc = getLocationFromImage(tempImage, mainImage, getSideFromFilename(str))
+      locations ++= tempLoc.map(Some(_))
+      Thread.sleep(1000)
+      mouseMoveSmooth(tempLoc)
+    }
+    getCenterPoint(locations.toList)
+  }
+
+
+  def getLocationFromImage(tempImage: Mat, mainImage: Mat, imageSide: String): Option[(Int, Int)] = {
+    // Convert images to HSV format
+    val tempImageHSV = new Mat()
+    val mainImageHSV = new Mat()
+    Imgproc.cvtColor(tempImage, tempImageHSV, Imgproc.COLOR_BGR2HSV)
+    Imgproc.cvtColor(mainImage, mainImageHSV, Imgproc.COLOR_BGR2HSV)
+
+    // Create the result matrix
+    val result = Mat.zeros(mainImageHSV.rows - tempImageHSV.rows + 1, mainImageHSV.cols - tempImageHSV.cols + 1, CvType.CV_32FC1)
+
+    // Match the images using template matching
+    Imgproc.matchTemplate(mainImageHSV, tempImageHSV, result, Imgproc.TM_CCOEFF)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.85) {
+      // Return the location of the center of the matched area or one of the side locations
+      val centerX = (minMaxLoc.maxLoc.x + tempImageHSV.cols / 2).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImageHSV.rows / 2).toInt
+      val (width, height) = (tempImageHSV.width(), tempImageHSV.height())
+      imageSide match {
+        case "bottom" => Some((centerX, minMaxLoc.maxLoc.y.toInt + height))
+        case "left" => Some((minMaxLoc.maxLoc.x.toInt, centerY.toInt))
+        case "top" => Some((centerX, minMaxLoc.maxLoc.y.toInt - height))
+        case "right" => Some((minMaxLoc.maxLoc.x.toInt + width, centerY.toInt))
+        case "middle" => Some((centerX, centerY))
+        case _ => None
+      }
+    } else {
+      println("Not found")
+      None
+    }
+  }
+
+
+
+//  def getLocationFromImage(tempImage: Mat, mainImage: Mat, imageSide: String): Option[(Int, Int)] = {
+//    // Convert images to HSV format
+//    val tempImageHSV = new Mat()
+//    val mainImageHSV = new Mat()
+//    Imgproc.cvtColor(tempImage, tempImageHSV, Imgproc.COLOR_BGR2HSV)
+//    Imgproc.cvtColor(mainImage, mainImageHSV, Imgproc.COLOR_BGR2HSV)
+//
+//    // Create the result matrix
+//    val result = Mat.zeros(mainImageHSV.rows - tempImageHSV.rows + 1, mainImageHSV.cols - tempImageHSV.cols + 1, CvType.CV_32FC1)
+//
+//    // Match the images using template matching
+//    Imgproc.matchTemplate(mainImageHSV, tempImageHSV, result, Imgproc.TM_CCOEFF)
+//
+//    // Find the best match location
+//    val minMaxLoc = Core.minMaxLoc(result)
+//
+//    // Check if the match is good enough
+//    if (minMaxLoc.maxVal > 0.80) {
+//      // Return the location of the center of the matched area or one of the side locations
+//      val centerX = (minMaxLoc.maxLoc.x + tempImageHSV.cols / 2).toInt
+//      val centerY = (minMaxLoc.maxLoc.y + tempImageHSV.rows / 2).toInt
+//      val (width, height) = (tempImageHSV.width(), tempImageHSV.height())
+//      imageSide match {
+//        case "bottom" => Some((centerX, minMaxLoc.maxLoc.y.toInt + height))
+//        case "left" => Some((minMaxLoc.maxLoc.x.toInt, centerY.toInt))
+//        case "top" => Some((centerX, minMaxLoc.maxLoc.y.toInt))
+//        case "right" => Some((minMaxLoc.maxLoc.x.toInt + width, centerY))
+//        case "middle" => Some((centerX, centerY))
+//        case _ => None
+//      }
+//    } else {
+//      println("Not found")
+//      None
+//    }
+//  }
+
+
+
 
 
   def getLocationFromImageMid(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
@@ -387,6 +510,57 @@ object image {
     outputImage
   }
 
+  def makeScreenshots(windowIDs: List[String]): Unit = {
+    // Maximize and take screenshots of all matching windows
+    for (windowID <- windowIDs) {
+      maximizeWindow(windowID)
+      Thread.sleep(500)
+      val windowTitle = Seq("xdotool", "getwindowname", windowID).!!.trim
+      val secondSection = windowTitle.split(" - ")(1).replaceAll("\\s", "_")
+      val screenshot = new Robot().createScreenCapture(new Rectangle(Toolkit.getDefaultToolkit.getScreenSize))
+      val filename = s"window_$secondSection.png"
+      val window = new File(filename)
+      ImageIO.write(screenshot, "png", window)
+    }
+  }
+
+//  def makeScreenshots(windowIDs: List[String]): Unit = {
+//    // Maximize and take screenshots of all matching windows
+//    for (windowID <- windowIDs) {
+//      maximizeWindow(windowID)
+//      Thread.sleep(500)
+//      val windowTitle = Seq("xdotool", "getwindowname", windowID).!!.trim
+//      val secondSection = windowTitle.split(" - ")(1).replaceAll("\\s", "")
+//      val screenshot = new Robot().createScreenCapture(new Rectangle(Toolkit.getDefaultToolkit.getScreenSize))
+//      val filename = s"window_$secondSection.png"
+//      val window = new File(filename)
+//      ImageIO.write(screenshot, "png", window)
+//    }
+//  }
+
+  def makeScreenshotMultiple(windowName: String): Unit = {
+    // Window name
+    val windowSubstring = windowName
+
+    // Search for windows that match the window name substring
+    val searchCommand = Seq("xdotool", "search", "--name", windowSubstring)
+    val searchProcess = new ProcessBuilder(searchCommand.toList.asJava).start()
+    val windowIDs = Source.fromInputStream(searchProcess.getInputStream()).getLines().toList
+
+    // Maximize and take screenshots of all matching windows
+    for (windowID <- windowIDs) {
+      maximizeWindow(windowID)
+      Thread.sleep(500)
+      val windowTitle = Seq("xdotool", "getwindowname", windowID).!!.trim
+      val secondSection = windowTitle.split(" - ")(1).replaceAll("\\s", "")
+      val screenshot = new Robot().createScreenCapture(new Rectangle(Toolkit.getDefaultToolkit.getScreenSize))
+      val filename = s"window_$secondSection.png"
+      val window = new File(filename)
+      ImageIO.write(screenshot, "png", window)
+    }
+  }
+
+
   def makeScreenshot(windowName: String): Unit = {
     // Window name
     val windowSubstring = windowName
@@ -409,22 +583,12 @@ object image {
     val screenRectangle = new Rectangle(screenSize)
     val screenshot = robot.createScreenCapture(screenRectangle)
 
-//    switching grayImage to screenshot
-//    val grayImage = new BufferedImage(screenshot.getWidth, screenshot.getHeight, BufferedImage.TYPE_BYTE_GRAY)
-//    val g = grayImage.createGraphics()
-//    g.drawImage(screenshot, 0, 0, null)
-//    g.dispose()
-
     val window = new File("window.png")
     ImageIO.write(screenshot, "png", window)
   }
-//
-//  def saveMatAsPng(mat: Mat, filename: String): Unit = {
-//    val bufferedImage = new BufferedImage(mat.width(), mat.height(), BufferedImage.TYPE_BYTE_GRAY)
-//    mat.get(0, 0, bufferedImage.getRaster().getDataBuffer().asInstanceOf[java.awt.image.DataBufferByte].getData())
-//    val file = new File(filename)
-//    ImageIO.write(bufferedImage, "png", file)
-//  }
+
+
+
   def saveMatAsPng(mat: Mat, filename: String): Unit = {
     val bufferedImage = new BufferedImage(mat.width(), mat.height(), BufferedImage.TYPE_BYTE_GRAY)
     mat.get(0, 0, bufferedImage.getRaster().getDataBuffer.asInstanceOf[java.awt.image.DataBufferByte].getData)

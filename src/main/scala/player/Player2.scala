@@ -1,12 +1,17 @@
 package player
 
-import org.opencv.core.Mat
-import player.Player2.{capacityValue, charExperience, charLevel, healthPoints, lastMealTimestamp, magicLevel, manaPoints, soulPoints}
 import utils.core.{getCurrentTimestamp, randomNumber}
-import utils.image.foodDetection
+import utils.image.{foodDetection, getLocationFromImageMid}
 import utils.mouse.{mouseMoveSmooth, rightClick}
+//import credentials._
+import org.opencv.core.{Mat}
+import java.time.Instant
+import java.time.Duration
 
-class Player(windowID: String, characterName: String) {
+object Player2 {
+  var playerWindowID: Int = 99999
+  var characterName: String = "Datwardaguy"
+  var charProffesion: String = "Druid"
   var charExperience: Int = 9999
   var charLevel: Int = 9999
   var healthPoints: Int = 9999
@@ -17,7 +22,6 @@ class Player(windowID: String, characterName: String) {
   var lastMealTimestamp: Long = System.currentTimeMillis / 1000
   var helmetLocation: Option[(Int, Int)] = None
   var armorLocation: Option[(Int, Int)] = None
-
 
   def setExperienceValue(value: Int): Unit = {
     charExperience = value
@@ -66,7 +70,7 @@ class Player(windowID: String, characterName: String) {
     val previousMealTimestamp = Player2.lastMealTimestamp
     // Calculate the difference between the timestamps
 
-    //    val difference = Duration.between(Instant.ofEpochSecond(previousMealTimestamp), Instant.ofEpochSecond(currentTimestamp)).getSeconds
+//    val difference = Duration.between(Instant.ofEpochSecond(previousMealTimestamp), Instant.ofEpochSecond(currentTimestamp)).getSeconds
     val difference = ((currentTimestamp - previousMealTimestamp)).toInt
     if (difference > randomNumber(30, 5, 20)) {
       eatFood(mainImage)

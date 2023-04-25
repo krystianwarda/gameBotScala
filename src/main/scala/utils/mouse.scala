@@ -3,6 +3,7 @@ package utils
 import java.awt.Robot
 import java.awt.event.InputEvent
 import java.awt.MouseInfo
+import java.awt.event.KeyEvent
 
 object mouse {
 
@@ -21,11 +22,17 @@ object mouse {
     }
   }
 
-//    def rightClick(x: Int, y: Int): Unit = {
-//      robot.mouseMove(x, y)
-//      robot.mousePress(InputEvent.BUTTON3_DOWN_MASK)
-//      robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
-//    }
+  def shiftClick(loc: Option[(Int, Int)]): Unit = {
+    loc.foreach { case (x, y) =>
+      robot.mouseMove(x, y)
+      robot.keyPress(KeyEvent.VK_SHIFT)
+      Thread.sleep(300)
+      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
+      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
+      Thread.sleep(300)
+      robot.keyRelease(KeyEvent.VK_SHIFT)
+    }
+  }
 
     def mouseMove(loc: Option[(Int, Int)]): Unit = {
       val (x, y) = loc.get
@@ -44,6 +51,12 @@ object mouse {
       }
     }
 
+  def calcLocOffset(location: Option[(Int, Int)], x: Int, y: Int): Option[(Int, Int)] = {
+    location.map { case (lat, long) =>
+      (lat + x, long + y)
+    }
+  }
+
 
   def mouseScroll(scrolls: Int): Unit = {
     robot.mouseWheel(scrolls)
@@ -61,10 +74,11 @@ object mouse {
         if (loc1.isDefined && loc2.isDefined) {
             val (x1, y1) = loc1.get
             val (x2, y2) = loc2.get
-            robot.mouseMove(x1, y1)
+            mouseMoveSmooth(loc1)
             robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
             Thread.sleep(600)
-            robot.mouseMove(x2, y2)
+            mouseMoveSmooth(loc2)
+//            robot.mouseMove(x2, y2)
             robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
         } else {
             println("Cannot drag mouse. One or both locations not found.")

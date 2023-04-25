@@ -3,7 +3,7 @@ package player
 import player.skillsWindow.{createRectangle, numberDetection}
 import utils.image.{extractRectangle, mouseOverRectangle, getLocationFromImageMid, getLocationFromImageMidLeft, loadImage, saveMatAsPng}
 import utils.mouse.mouseMoveSmooth
-import player.Player
+import player.Player2
 
 import java.awt.Robot
 import java.awt.event.KeyEvent
@@ -30,13 +30,13 @@ object core {
 
       // assign skillValue to specific skill using Player.updateState
       str match {
-        case "charExperience" => Player.updateState(str, skillValue)
-        case "charLevel" => Player.updateState(str, skillValue)
-        case "healthPoints" => Player.updateState(str, skillValue)
-        case "manaPoints" => Player.updateState(str, skillValue)
-        case "soulPoints" => Player.updateState(str, skillValue)
-        case "capacityValue" => Player.updateState(str, skillValue)
-        case "magicLevel" => Player.updateState(str, skillValue)
+        case "charExperience" => Player2.updateState(str, skillValue)
+        case "charLevel" => Player2.updateState(str, skillValue)
+        case "healthPoints" => Player2.updateState(str, skillValue)
+        case "manaPoints" => Player2.updateState(str, skillValue)
+        case "soulPoints" => Player2.updateState(str, skillValue)
+        case "capacityValue" => Player2.updateState(str, skillValue)
+        case "magicLevel" => Player2.updateState(str, skillValue)
         case _ => println(s"Invalid skill: $str")
       }
     }
@@ -63,7 +63,7 @@ object core {
       mouseOverRectangle(rectangleCoords)
       var rectangleImage = extractRectangle(mainImage, rectangleCoords)
       saveMatAsPng(mainImage, str)
-      Player.updateState(str, numberDetection(rectangleImage))
+      Player2.updateState(str, numberDetection(rectangleImage))
 
     }
   }
