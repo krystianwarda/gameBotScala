@@ -1,18 +1,15 @@
 package utils
 import java.util.ArrayList
 import org.bytedeco.javacpp.Loader
+import org.opencv.core.{Core, CvType, MatOfPoint2f}
+//import org.bytedeco.javacpp.opencv_core.Mat
 import net.sourceforge.tess4j.Tesseract
 
 import java.awt.image.BufferedImage
-import java.io.File
-import javax.imageio.ImageIO
-import org.opencv.core.{Mat, MatOfPoint2f, Point, Rect}
-import org.opencv.imgproc.Imgproc
+import java.io.{ByteArrayInputStream, File}
 import scala.sys.process.stringSeqToProcess
 import java.awt.image.{BufferedImage, DataBufferByte}
 import javax.imageio.ImageIO
-import org.opencv.core.{Core, CvType, Mat, MatOfPoint2f, Point, Rect, Scalar}
-
 import java.awt.{Robot, Window}
 import org.opencv.imgproc.Imgproc
 import org.opencv.core.Core.MinMaxLocResult
@@ -54,8 +51,13 @@ import org.bytedeco.javacpp._
 
 import java.io.File
 import org.apache.commons.io.FilenameUtils
+//import org.bytedeco.javacpp.opencv_core._
+import org.opencv.core.MatOfByte
 import utils.core.maximizeWindow
 import utils.mouse.mouseMoveSmooth
+import org.opencv.core.Mat
+import org.opencv.core.Point
+
 
 object image {
 
@@ -389,8 +391,6 @@ object image {
   }
 
 
-
-
   def getLocationSample(): Option[(Int, Int)] = {
     System.setProperty("java.library.path", "/usr/opencv/build/lib")
     println(System.getProperty("java.library.path"))
@@ -561,6 +561,21 @@ object image {
   }
 
 
+  def makeScreenshotID(windowID: String, characterName: String): String = {
+    // Create a robot and take a screenshot of the specified window
+    val screenSize = Toolkit.getDefaultToolkit.getScreenSize
+    val robot = new Robot()
+    val screenRectangle = new Rectangle(screenSize)
+    val screenshot = robot.createScreenCapture(screenRectangle)
+
+    // Save the screenshot to a file
+    val file = new File(s"window_${characterName}.png")
+    ImageIO.write(screenshot, "png", file)
+
+    // Return the path of the saved file
+    file.getAbsolutePath
+
+  }
   def makeScreenshot(windowName: String): Unit = {
     // Window name
     val windowSubstring = windowName

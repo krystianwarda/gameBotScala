@@ -3,7 +3,7 @@
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 import utils.image.loadImage
-import player.Player2._
+import player.Player
 import utils.keyboard.sendText
 import utils.core.randomSleep
 import java.io.File

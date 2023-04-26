@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
   "org.bytedeco" % "opencv" % "4.5.5-1.5.7",
   "com.github.wichtounet" % "scalax11" % "2.0.0",
   "com.xuggle" % "xuggle-xuggler" % "5.4",
-  "org.scala-lang.modules" %% "scala-swing" % "3.0.0"
+  "org.scala-lang.modules" % "scala-swing" % "3.0.0",
+  "org.scalatest" % "scalatest" % "3.2.10" % "test"
 )
 //"com.liferay" % "com.xuggle.xuggler" % "5.4",

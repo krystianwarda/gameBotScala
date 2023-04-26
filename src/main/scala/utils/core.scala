@@ -18,17 +18,21 @@ import javax.imageio.ImageIO
 import scala.collection.JavaConverters._
 import org.opencv.imgproc.Imgproc
 import org.opencv.imgcodecs.Imgcodecs
+
 import scala.util.Random
 import scala.concurrent.duration._
 import scala.sys.process.stringSeqToProcess
 import utils.gameScreen._
 import utils.gameScreen
+
 import java.awt.Robot
 import java.awt.event.InputEvent
+import player.Player
+import utils.image.{loadImage, makeScreenshot, makeScreenshotID}
 
 object core {
 
-    def detectPlayerWindows(windowNameSubstring: String): List[PlayerWindow] = {
+    def detectPlayerWindows(windowNameSubstring: String): List[Player] = {
         // Search for windows that match the window name substring
         val searchCommand = Seq("xdotool", "search", "--name", windowNameSubstring)
         val searchProcess = new ProcessBuilder(searchCommand.toList.asJava).start()
@@ -40,7 +44,8 @@ object core {
             Thread.sleep(500)
             val windowTitle = Seq("xdotool", "getwindowname", windowID).!!.trim
             val characterName = windowTitle.split(" - ")(1).replaceAll("\\s", "_")
-            PlayerWindow(windowID.toInt, characterName)
+            var screenshotPath = makeScreenshotID(windowID, characterName)
+            new Player(windowID, characterName,loadImage(screenshotPath))
         }
     }
     def detectWindows(windowName: String): List[String] = {
@@ -54,6 +59,7 @@ object core {
 
         windowIDs
     }
+
 
     def getCurrentTimestamp: Long = System.currentTimeMillis / 1000
         // Instant.now().getEpochSecond
@@ -94,6 +100,12 @@ object core {
 //    }
     def randomNumber(baseNumber: Int, randomNumber1: Int, randomNumber2: Int): Int = {
         baseNumber + Random.between(randomNumber1, randomNumber2 + 1)
+    }
+
+    def randomDirection(): String = {
+        val directions = Array("left", "right", "top", "bottom")
+        val randomIndex = Random.nextInt(directions.length)
+        directions(randomIndex)
     }
 
     def randomSleep(baseTime: Int, randomTime1: Int, randomTime2: Int): Unit = {

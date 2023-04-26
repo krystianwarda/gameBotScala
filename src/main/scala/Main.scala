@@ -20,14 +20,14 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import org.opencv.objdetect.CascadeClassifier
 import org.opencv.core.CvType
-import utils.image.{loadImage, loadOpenCVSettings, makeScreenshot, refreshWindow}
-import player.Player2
+import utils.image.{loadImage, loadOpenCVSettings, makeScreenshot, makeScreenshotID, refreshWindow}
+import player.Player
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import credentials._
-import player.Player2.{eatFood, foodStatus}
-import player.core.checkSkills
-import utils.core.{getCurrentTimestamp, getWindowId, maximizeWindow}
+//import player.Player.{eatFood, foodStatus}
+//import player.core.checkSkills
+import utils.core.{detectPlayerWindows, getCurrentTimestamp, getWindowId, maximizeWindow}
 import utils.keyboard.sendText
 import utils.gameScreen
 //import player.Spells
@@ -42,18 +42,22 @@ object Main {
 //    val cascadeClassifier = new CascadeClassifier("path/to/your/cascade/classifier.xml") // path to your cascade classifier file
 //    val scaleFactor = 1.2 // scale factor for object detection
 //    val minNeighbors = 3 // minimum number of neighbors for object detection
-    makeScreenshot(windowName)
+//    makeScreenshot(windowName)
 
-
+    val playersList = detectPlayerWindows(windowName)
     while (true) {
-      maximizeWindow(gameScreen.windowId)
-      makeScreenshot(windowName)
-      checkSkills()
-      println(Player2.manaPoints)
+      println("Start...")
+      for (singlePlayer <- playersList) {
+        println(singlePlayer)
+        maximizeWindow(singlePlayer.windowID)
+        makeScreenshotID(singlePlayer.windowID, singlePlayer.characterName)
+        singlePlayer.checkSkills()
+        singlePlayer.foodStatus(loadImage(s"window_${singlePlayer.characterName}.png"))
+        singlePlayer.rotationStatus()
 
-      foodStatus(loadImage("window.png"))
-      if (Player2.manaPoints > 40) {Spells.castSpellMultiple("exura", 1)}
-
+        if (singlePlayer.getManaPoints > 40) {Spells.castSpellMultiple("utevo lux", 1)}
+        Thread.sleep(3000)
+      }
     }
   }
 }

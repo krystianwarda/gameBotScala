@@ -1,3 +1,4 @@
+.gitignore
 /src/main/scala/inventory/
 /src/main/scala/mlmodel/
 /src/main/scala/credentials.scala
@@ -14,7 +15,7 @@
 /src/main/scala/gameMoveTest.scala
 /src/main/scala/MultiDigitNumberDetection.scala
 /src/main/scala/MultiDigitNumberDetection2.scala
-/src/main/scala/testFunctionOPENCV.scala
+/src/tests/scala/testFunctionOPENCV.scala
 /src/main/scala/Main2.scala
 /numbertest.png
 /output.png
@@ -32,3 +33,4 @@
 /window.png
 /window_Vanderschrick.png
 /window_Winston_Smith.png
+/window_Datwardaguy.png
