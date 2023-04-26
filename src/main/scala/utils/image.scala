@@ -1,7 +1,9 @@
 package utils
 import java.util.ArrayList
 import org.bytedeco.javacpp.Loader
-import org.opencv.core.{Core, CvType, MatOfPoint2f}
+import org.opencv.core.{Core, CvType, MatOfPoint2f, Rect, Scalar}
+
+import java.nio.file.Files
 //import org.bytedeco.javacpp.opencv_core.Mat
 import net.sourceforge.tess4j.Tesseract
 
@@ -57,6 +59,8 @@ import utils.core.maximizeWindow
 import utils.mouse.mouseMoveSmooth
 import org.opencv.core.Mat
 import org.opencv.core.Point
+import org.opencv.core.Core.MinMaxLocResult
+
 
 
 object image {
@@ -294,6 +298,119 @@ object image {
 
 
 
+  def getLocationFromImageRight(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
+    // Convert images to HSV format
+    val tempImageHSV = new Mat()
+    val mainImageHSV = new Mat()
+    Imgproc.cvtColor(tempImage, tempImageHSV, Imgproc.COLOR_BGR2HSV)
+    Imgproc.cvtColor(mainImage, mainImageHSV, Imgproc.COLOR_BGR2HSV)
+
+    // Create the result matrix
+    val result = Mat.zeros(mainImageHSV.rows - tempImageHSV.rows + 1, mainImageHSV.cols - tempImageHSV.cols + 1, CvType.CV_32FC1)
+
+    // Match the images using template matching
+    Imgproc.matchTemplate(mainImageHSV, tempImageHSV, result, Imgproc.TM_CCOEFF)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.80) {
+      // Return the location of the point on the right side of the matched area
+      val rightX = (minMaxLoc.maxLoc.x + tempImageHSV.cols).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImageHSV.rows / 2).toInt
+      Some((rightX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
+  def getLocationFromImageMidGrey(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
+    // Create the result matrix
+    val result = new Mat()
+    Imgproc.matchTemplate(mainImage, tempImage, result, Imgproc.TM_CCOEFF_NORMED)
+
+    // Threshold the result to eliminate weak matches
+    val threshold = 0.99
+    val thresholded = new Mat()
+    Core.compare(result, new Scalar(threshold), thresholded, Core.CMP_GT)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > threshold) {
+      // Return the location of the center of the matched area
+      val centerX = (minMaxLoc.maxLoc.x + tempImage.cols / 2).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImage.rows / 2).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
+
+  import org.opencv.core._
+  import org.opencv.imgproc.Imgproc
+
+  def getLocationFromImageMidMatchTemp(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
+    // Create the result matrix
+    val result = new Mat()
+    val matchMethod = Imgproc.TM_CCOEFF_NORMED
+    Imgproc.matchTemplate(mainImage, tempImage, result, matchMethod)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.99) {
+      // Return the location of the center of the matched area
+      val centerX = (minMaxLoc.maxLoc.x + tempImage.cols / 2).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImage.rows / 2).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
+
+  import org.opencv.core._
+  import org.opencv.imgproc.Imgproc
+
+  def getLocationFromImageMidEdgeDetect(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
+    // Convert images to grayscale
+    val tempImageGray = new Mat()
+    val mainImageGray = new Mat()
+    Imgproc.cvtColor(tempImage, tempImageGray, Imgproc.COLOR_BGR2GRAY)
+    Imgproc.cvtColor(mainImage, mainImageGray, Imgproc.COLOR_BGR2GRAY)
+
+    // Detect edges
+    val tempImageEdges = new Mat()
+    val mainImageEdges = new Mat()
+    val threshold1 = 50
+    val threshold2 = 200
+    val apertureSize = 3
+    Imgproc.Canny(tempImageGray, tempImageEdges, threshold1, threshold2, apertureSize, false)
+    Imgproc.Canny(mainImageGray, mainImageEdges, threshold1, threshold2, apertureSize, false)
+
+    // Create the result matrix
+    val result = new Mat()
+    Imgproc.matchTemplate(mainImageEdges, tempImageEdges, result, Imgproc.TM_CCOEFF_NORMED)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.99) {
+      // Return the location of the center of the matched area
+      val centerX = (minMaxLoc.maxLoc.x + tempImage.cols / 2).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImage.rows / 2).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
 
 
   def getLocationFromImageMid(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
@@ -320,6 +437,166 @@ object image {
       Some((centerX, centerY))
     } else {
       println("Not found")
+      None
+    }
+  }
+  def getLocationFromImagePoint(tempImage: Mat, mainImage: Mat, edgePoint: Option[(Int, Int)], pointSide: String): Option[(Int, Int)] = {
+    // Convert images to HSV format
+    val tempImageHSV = new Mat()
+    val mainImageHSV = new Mat()
+    Imgproc.cvtColor(tempImage, tempImageHSV, Imgproc.COLOR_BGR2HSV)
+    Imgproc.cvtColor(mainImage, mainImageHSV, Imgproc.COLOR_BGR2HSV)
+
+    // Set the search area based on the edge point and the side
+    val searchArea = pointSide match {
+      case "left" => new Rect(0, 0, edgePoint.map(_._1).getOrElse(0), mainImageHSV.rows)
+      case "right" => new Rect(edgePoint.map(_._1).getOrElse(mainImageHSV.cols), 0, mainImageHSV.cols - edgePoint.map(_._1).getOrElse(mainImageHSV.cols), mainImageHSV.rows)
+      case "top" => new Rect(0, 0, mainImageHSV.cols, edgePoint.map(_._2).getOrElse(0))
+      case "bottom" => new Rect(0, edgePoint.map(_._2).getOrElse(mainImageHSV.rows), mainImageHSV.cols, mainImageHSV.rows - edgePoint.map(_._2).getOrElse(mainImageHSV.rows))
+      case _ => new Rect(0, 0, mainImageHSV.cols, mainImageHSV.rows)
+    }
+
+    // Create the result matrix
+    val result = Mat.zeros(searchArea.height - tempImageHSV.rows + 1, searchArea.width - tempImageHSV.cols + 1, CvType.CV_32FC1)
+
+    // Match the images using template matching
+    val searchRegion = new Mat(mainImageHSV, searchArea)
+    Imgproc.matchTemplate(searchRegion, tempImageHSV, result, Imgproc.TM_CCOEFF)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.99) {
+      // Return the location of the center of the matched area
+      val centerX = (minMaxLoc.maxLoc.x + tempImageHSV.cols / 2 + searchArea.x).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImageHSV.rows / 2 + searchArea.y).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
+
+  def getLocationFromCroppedImage(tempImage: Mat, mainImage: Mat, equipmentArea: Option[Rect]): Option[(Int, Int)] = {
+    // Convert images to HSV format
+    val tempImageHSV = new Mat()
+    val mainImageHSV = new Mat()
+    Imgproc.cvtColor(tempImage, tempImageHSV, Imgproc.COLOR_BGR2HSV)
+    equipmentArea.foreach(rect => Imgproc.cvtColor(new Mat(mainImage, rect), mainImageHSV, Imgproc.COLOR_BGR2HSV))
+
+    // Create the result matrix
+    val result = Mat.zeros(mainImageHSV.rows - tempImageHSV.rows + 1, mainImageHSV.cols - tempImageHSV.cols + 1, CvType.CV_32FC1)
+
+    // Match the images using template matching
+    Imgproc.matchTemplate(mainImageHSV, tempImageHSV, result, Imgproc.TM_CCOEFF)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.95) {
+      // Return the location of the center of the matched area
+      val rectX = equipmentArea.map(_.x).getOrElse(0)
+      val rectY = equipmentArea.map(_.y).getOrElse(0)
+      val centerX = (minMaxLoc.maxLoc.x + tempImageHSV.cols / 2 + rectX).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImageHSV.rows / 2 + rectY).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
+
+
+
+  //  def getLocationFromCroppedImage(tempImage: Mat, mainImage:Mat, equipmentArea: Option[Rect]): Option[(Int, Int)] = {
+//    // Convert images to HSV format
+//    val tempImageHSV = new Mat()
+//    val mainImageHSV = new Mat()
+//    Imgproc.cvtColor(tempImage, tempImageHSV, Imgproc.COLOR_BGR2HSV)
+//    equipmentArea.foreach(rect => Imgproc.cvtColor(new Mat(mainImage, rect), mainImageHSV, Imgproc.COLOR_BGR2HSV))
+//
+//    // Create the result matrix
+//    val result = Mat.zeros(mainImageHSV.rows - tempImageHSV.rows + 1, mainImageHSV.cols - tempImageHSV.cols + 1, CvType.CV_32FC1)
+//
+//    // Match the images using template matching
+//    Imgproc.matchTemplate(mainImageHSV, tempImageHSV, result, Imgproc.TM_CCOEFF)
+//
+//    // Find the best match location
+//    val minMaxLoc = Core.minMaxLoc(result)
+//
+//    // Check if the match is good enough
+//    if (minMaxLoc.maxVal > 0.95) {
+//      // Return the location of the center of the matched area
+//      val rectX = equipmentArea.map(_.x).getOrElse(0)
+//      val rectY = equipmentArea.map(_.y).getOrElse(0)
+//      val centerX = (minMaxLoc.maxLoc.x + tempImageHSV.cols / 2 + rectX).toInt
+//      val centerY = (minMaxLoc.maxLoc.y + tempImageHSV.rows / 2 + rectY).toInt
+//      Some((centerX, centerY))
+//    } else {
+//      println("Not found")
+//      None
+//    }
+//  }
+
+  def cropImageRect(mainImage: Mat, croppedArea: Option[Rect]): Mat = {
+    croppedArea match {
+      case Some(rect) =>
+        // Create a new Mat to hold the cropped image
+        val croppedImage = new Mat(mainImage, rect)
+        // Clone the Mat to avoid modifying the original image
+        val result = new Mat()
+        croppedImage.copyTo(result)
+        result
+      case None =>
+        // If no rectangle is provided, return the original image
+        mainImage.clone()
+    }
+  }
+
+  def singleCutWindow(mainImage: Mat, cutLoc: Option[(Int, Int)], croppedSide: String): Option[Rect] = {
+    // Check if cutLoc is defined
+    if (cutLoc.isDefined) {
+      // Get the cut location
+      val (cutX, cutY) = cutLoc.get
+
+      // Get the size of the main image
+      val (width, height) = (mainImage.cols, mainImage.rows)
+
+      // Determine the size of the new rectangle
+      val newWidth = if (croppedSide == "left" || croppedSide == "right") {
+        if (croppedSide == "left") cutX else width - cutX
+      } else {
+        width
+      }
+
+      val newHeight = if (croppedSide == "top" || croppedSide == "bottom") {
+        if (croppedSide == "top") cutY else height - cutY
+      } else {
+        height
+      }
+
+      // Determine the position of the new rectangle
+      val newX = if (croppedSide == "right") {
+        cutX
+      } else {
+        0
+      }
+
+      val newY = if (croppedSide == "bottom") {
+        cutY
+      } else {
+        0
+      }
+
+      // Create the new rectangle
+      val newRect = new Rect(newX, newY, newWidth, newHeight)
+
+      // Return the new rectangle
+      Some(newRect)
+    } else {
+      // Cut location is not defined
       None
     }
   }
@@ -558,6 +835,32 @@ object image {
       val window = new File(filename)
       ImageIO.write(screenshot, "png", window)
     }
+  }
+
+  import java.awt.{Rectangle, Toolkit}
+  import java.awt.image.BufferedImage
+  import java.io.File
+  import javax.imageio.ImageIO
+  import org.opencv.core.{CvType, Mat, MatOfByte}
+  import org.opencv.imgcodecs.Imgcodecs
+
+  def makeScreenshotMat(windowID: String, characterName: String): Mat = {
+    // Create a robot and take a screenshot of the specified window
+    val screenSize = Toolkit.getDefaultToolkit.getScreenSize
+    val robot = new Robot()
+    val screenRectangle = new Rectangle(screenSize)
+    val screenshot: BufferedImage = robot.createScreenCapture(screenRectangle)
+
+    // Save the screenshot to a file
+    val file = new File(s"window_${characterName}.png")
+    ImageIO.write(screenshot, "png", file)
+
+    // Read the saved file as a Mat object
+    val bytes = Files.readAllBytes(file.toPath)
+    val screenshotMat = Imgcodecs.imdecode(new MatOfByte(bytes: _*), Imgcodecs.IMREAD_UNCHANGED)
+
+    // Return the Mat object
+    screenshotMat
   }
 
 

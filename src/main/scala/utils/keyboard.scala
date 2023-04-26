@@ -21,7 +21,7 @@ object keyboard {
         case "top"    => e.KeyEvent.VK_UP
         case "bottom" => e.KeyEvent.VK_DOWN
       })
-      Thread.sleep(randomNumber(3,5,15)*100)
+      Thread.sleep(randomNumber(1,2,5)*100)
       robot.keyRelease(script match {
         case "left"   => e.KeyEvent.VK_LEFT
         case "right"  => e.KeyEvent.VK_RIGHT

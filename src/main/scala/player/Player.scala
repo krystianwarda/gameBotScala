@@ -72,6 +72,13 @@ class Player(val windowID: String, val characterName: String,var charWindow: Mat
     return this.manaPoints
   }
 
+  def getCharWindow(): Mat = {
+    return charWindow
+  }
+  def updateCharWindow(image: Mat): Unit = {
+    charWindow = image
+  }
+
   def checkSkills(): Unit = {
     // check skills sections
     println(this.characterName)
@@ -139,10 +146,11 @@ class Player(val windowID: String, val characterName: String,var charWindow: Mat
     var previousCharacterRotation = this.getLastCharacterRotation
     var difference = ((currentTimestamp - previousCharacterRotation)).toInt
     println(s"Rotation, ${this.characterName}, diff: ${difference}")
-    if (difference > randomNumber(30, 50, 150)) {
+    if (difference > randomNumber(60, 50, 150)) {
       for (i <- 2 to 3 + randomNumber(0, 1, 3)) {
         pressCtrlDirection(randomDirection())
       }
+      pressCtrlDirection("top")
     }
   }
 

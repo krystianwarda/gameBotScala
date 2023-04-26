@@ -1,3 +1,5 @@
+import cavebot.core.locateLoot
+
 import java.awt.Rectangle
 import java.awt.Robot
 import java.awt.Toolkit
@@ -20,7 +22,7 @@ import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
 import org.opencv.objdetect.CascadeClassifier
 import org.opencv.core.CvType
-import utils.image.{loadImage, loadOpenCVSettings, makeScreenshot, makeScreenshotID, refreshWindow}
+import utils.image.{loadImage, loadImage3, loadOpenCVSettings, makeScreenshot, makeScreenshotID, makeScreenshotMat, refreshWindow}
 import player.Player
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,15 +50,27 @@ object Main {
     while (true) {
       println("Start...")
       for (singlePlayer <- playersList) {
-        println(singlePlayer)
+        println(singlePlayer.characterName)
         maximizeWindow(singlePlayer.windowID)
-        makeScreenshotID(singlePlayer.windowID, singlePlayer.characterName)
-        singlePlayer.checkSkills()
-        singlePlayer.foodStatus(loadImage(s"window_${singlePlayer.characterName}.png"))
-        singlePlayer.rotationStatus()
+        singlePlayer.updateCharWindow(makeScreenshotMat(singlePlayer.windowID, singlePlayer.characterName))
 
-        if (singlePlayer.getManaPoints > 40) {Spells.castSpellMultiple("utevo lux", 1)}
-        Thread.sleep(3000)
+        locateLoot(singlePlayer)
+        Thread.sleep(5000)
+
+
+
+
+
+
+//        // training
+//        singlePlayer.checkSkills()
+//        singlePlayer.rotationStatus()
+//        if (singlePlayer.characterName == "Datwardaguy") {
+//          singlePlayer.foodStatus(loadImage(s"window_${singlePlayer.characterName}.png"))
+//          if (singlePlayer.getManaPoints > 25) {Spells.castSpellMultiple("utevo lux", 1)}
+//        }
+
+
       }
     }
   }
