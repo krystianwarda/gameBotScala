@@ -1,6 +1,8 @@
+
 import cavebot.{CaveBot, core}
 import cavebot.core.{followWaypoints, locateLoot, moveToNextWaypoint, recordWaypoints}
 import radar.core.findCharLocation
+
 import utils.image.getLocationFromImageMidMatchTemp
 import utils.mouse.{leftClick, rightClick}
 
@@ -40,62 +42,35 @@ import utils.keyboard.sendText
 import utils.gameScreen
 import cavebot.CaveBot
 //import player.Spells
+//import scala.collection.immutable.Function1
+//import userUI.swingApp
 
 object Main {
 
   def main(args: Array[String]): Unit = {
+    val app = new userUI.swingApp
+    app.main(Array())
     loadOpenCVSettings()
     gameScreen.setWindowName(windowName)
     gameScreen.setWindowId(getWindowId(windowName))
 
-    val captureInterval = 1000 // capture interval in milliseconds
+
+//    val captureInterval = 1000 // capture interval in milliseconds
 //    val cascadeClassifier = new CascadeClassifier("path/to/your/cascade/classifier.xml") // path to your cascade classifier file
 //    val scaleFactor = 1.2 // scale factor for object detection
 //    val minNeighbors = 3 // minimum number of neighbors for object detection
 //    makeScreenshot(windowName)
-
-    val playersList = detectPlayerWindows(windowName)
-    while (true) {
-      println("Start...")
-      for (singlePlayer <- playersList) {
-        println(singlePlayer.characterName)
-        maximizeWindow(singlePlayer.windowID)
-        singlePlayer.updateGeneral()
-
-//        var caveBotTestClass = new CaveBot("testPath")
-////         create a cavebot path
-//        for (i <- 1 to 4) {
-//          singlePlayer.updateGeneral()
-//          recordWaypoints(singlePlayer, caveBotTestClass)
-//          Thread.sleep(5000)
-//        }
-//        caveBotTestClass.saveStateToFile(caveBotTestClass.getCaveBotName())
-//        println("Saved")
-//        Thread.sleep(20000)
-
-        var caveBotTestClass = new CaveBot("testPath")
-        caveBotTestClass.loadStateFromFile("classes/cavebot/testPath.ser")
-        println("In 3 seconds cavebot initialization.")
-        Thread.sleep(4000)
-        for (i <- 1 to 4) {
-          singlePlayer.updateGeneral()
-          followWaypoints(singlePlayer, caveBotTestClass)
-          Thread.sleep(4000)
-        }
-        print("Finished the route")
-
-
-
-
-//        moveToNextWaypoint(singlePlayer)
-
-//        singlePlayer.autoheal(exura =Some(230), IH=Some(170))
-//        locateLoot(singlePlayer)
-
-
-      }
-    }
-
+//
+//    val playersList = detectPlayerWindows(windowName)
+//    while (true) {
+//      println("Start...")
+//      for (singlePlayer <- playersList) {
+//        println(singlePlayer.characterName)
+//        maximizeWindow(singlePlayer.windowID)
+//        singlePlayer.updateGeneral()
+//      }
+//    }
+//
 
 
 
@@ -112,3 +87,36 @@ object Main {
 
   }
 }
+
+
+// cavebot
+
+//        var caveBotTestClass = new CaveBot("testPath")
+////         create a cavebot path
+//        for (i <- 1 to 4) {
+//          singlePlayer.updateGeneral()
+//          recordWaypoints(singlePlayer, caveBotTestClass)
+//          Thread.sleep(5000)
+//        }
+//        caveBotTestClass.saveStateToFile(caveBotTestClass.getCaveBotName())
+//        println("Saved")
+//        Thread.sleep(20000)
+
+//var caveBotTestClass = new CaveBot("testPath")
+//caveBotTestClass.loadStateFromFile("classes/cavebot/testPath.ser")
+//println("In 3 seconds cavebot initialization.")
+//Thread.sleep(4000)
+//for (i <- 1 to 4) {
+//  singlePlayer.updateGeneral()
+//  followWaypoints(singlePlayer, caveBotTestClass)
+//  Thread.sleep(4000)
+//}
+//print("Finished the route")
+
+
+
+//autoheal
+//        singlePlayer.autoheal(exura =Some(230), IH=Some(170))
+
+//Create lootbag
+//        locateLoot(singlePlayer)

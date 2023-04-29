@@ -40,8 +40,12 @@ class CaveBot(caveBotName: String) extends Serializable {
 
   // method to add a waypoint image to the list
   def addWaypointArray(waypointArray: Array[Array[Int]]): Unit = {
-    waypointsList = waypointArray :: waypointsList
+    waypointsList = waypointsList :+ waypointArray
   }
+
+  //  def addWaypointArray(waypointArray: Array[Array[Int]]): Unit = {
+//    waypointsList = waypointArray :+ waypointsList
+//  }
 
   // method to return the next waypoint from the list in a circular fashion
   def getNextWaypoint(): Option[Array[Array[Int]]] = {
