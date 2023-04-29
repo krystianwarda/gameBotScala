@@ -50,9 +50,9 @@ object Main {
   def main(args: Array[String]): Unit = {
     val app = new userUI.swingApp
     app.main(Array())
-    loadOpenCVSettings()
-    gameScreen.setWindowName(windowName)
-    gameScreen.setWindowId(getWindowId(windowName))
+//    loadOpenCVSettings()
+//    gameScreen.setWindowName(windowName)
+//    gameScreen.setWindowId(getWindowId(windowName))
 
 
 //    val captureInterval = 1000 // capture interval in milliseconds
@@ -62,7 +62,9 @@ object Main {
 //    makeScreenshot(windowName)
 //
 //    val playersList = detectPlayerWindows(windowName)
-//    while (true) {
+    while (true) {
+      Thread.sleep(200000000)
+    }
 //      println("Start...")
 //      for (singlePlayer <- playersList) {
 //        println(singlePlayer.characterName)
