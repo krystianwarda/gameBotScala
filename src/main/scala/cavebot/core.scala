@@ -1,8 +1,8 @@
 package cavebot
 
-import utils.image.{cropImageRect, getCenterLoc, getCenterPoint, getLocationFromCroppedImage, getLocationFromImage, getLocationFromImageMid, getLocationFromImageMidEdgeDetect, getLocationFromImageMidLeft, getLocationFromImageMidMatchTemp, getLocationFromImagePoint, getLocationFromImageRight, getSideFromFilename, loadImage, makeScreenshotMat, singleCutWindow}
+import utils.image.{arrayToMat, cropImageRect, fromBytes, getCenterLoc, getCenterPoint, getLocationFromCroppedImage, getLocationFromImage, getLocationFromImageHashMidMatchLowConf, getLocationFromImageMid, getLocationFromImageMidEdgeDetect, getLocationFromImageMidLeft, getLocationFromImageMidMatchTemp, getLocationFromImageMidMatchTempLowConf, getLocationFromImagePoint, getLocationFromImageRight, getSideFromFilename, hashMat, hashit, hashitHex, loadImage, makeScreenshotMat, matToArray, saveMatToFile, singleCutWindow}
 import org.opencv.core.Mat
-import utils.mouse.{calcLocOffset, mouseDrag, mouseDragSmooth, mouseMoveSmooth, rightClick, shiftClick}
+import utils.mouse.{calcLocOffset, leftClick, mouseDrag, mouseDragSmooth, mouseMoveSmooth, rightClick, shiftClick}
 
 import scala.io.StdIn
 import scala.collection.mutable.ListBuffer
@@ -10,7 +10,35 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import org.opencv.core.Rect
 import player.Player
+//import cavebot.CaveBot
+
 object core {
+
+
+  def recordWaypoints(playerClass: Player, caveBotClass: CaveBot): Unit = {
+    var radarImage = playerClass.getRadarImage()
+    saveMatToFile(radarImage, "savedWaypoint")
+    var radarArray = matToArray(radarImage)
+    caveBotClass.addWaypointArray(radarArray)
+    println("recorded a step")
+  }
+
+  def followWaypoints(playerClass: Player, caveBotClass: CaveBot): Unit = {
+    val nextWaypoint = caveBotClass.getNextWaypoint().getOrElse(Array.empty[Array[Int]])
+    if (nextWaypoint.nonEmpty) {
+      moveToNextWaypoint(playerClass, nextWaypoint)
+      println("load a step")
+    } else {
+      println("No more waypoints.")
+    }
+  }
+  def moveToNextWaypoint(playerClass: Player, tempWaypoints: Array[Array[Int]]): Unit = {
+    var charWindow = playerClass.getCharWindow()
+    var matFile =arrayToMat(tempWaypoints)
+    saveMatToFile(matFile, "loadedWaypoint")
+    var nextMoveLoc = getLocationFromImageMidMatchTempLowConf(matFile, charWindow)
+    leftClick(nextMoveLoc)
+  }
 
   def locateLoot(playerClass: Player): Unit = {
 
@@ -33,7 +61,7 @@ object core {
     mouseMoveSmooth(tempLoc)
     println("Bag found")
     rightClick(tempLoc)
-    playerClass.updateCharWindow(makeScreenshotMat(playerClass.windowID, playerClass.characterName))
+    playerClass.updateCharWindow()
   }
 
   def dropLoot(playerClass: Player, edgePoint: Option[(Int, Int)], centerLoc: Option[(Int, Int)]): Unit = {
@@ -49,7 +77,7 @@ object core {
       } else {
         println(str)
         mouseDragSmooth(tempLoc, centerLoc)
-        playerClass.updateCharWindow(makeScreenshotMat(playerClass.windowID, playerClass.characterName))
+        playerClass.updateCharWindow()
       }
     }
   }

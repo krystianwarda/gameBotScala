@@ -1,4 +1,8 @@
-import cavebot.core.locateLoot
+import cavebot.{CaveBot, core}
+import cavebot.core.{followWaypoints, locateLoot, moveToNextWaypoint, recordWaypoints}
+import radar.core.findCharLocation
+import utils.image.getLocationFromImageMidMatchTemp
+import utils.mouse.{leftClick, rightClick}
 
 import java.awt.Rectangle
 import java.awt.Robot
@@ -10,7 +14,7 @@ import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.io.Source
-import scala.jdk.CollectionConverters._
+//import scala.jdk.CollectionConverters._
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.MatOfRect
@@ -27,14 +31,18 @@ import player.Player
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import credentials._
+//import radar.core.locatePosition
+import utils.mouse.mouseMoveSmooth
 //import player.Player.{eatFood, foodStatus}
 //import player.core.checkSkills
 import utils.core.{detectPlayerWindows, getCurrentTimestamp, getWindowId, maximizeWindow}
 import utils.keyboard.sendText
 import utils.gameScreen
+import cavebot.CaveBot
 //import player.Spells
 
 object Main {
+
   def main(args: Array[String]): Unit = {
     loadOpenCVSettings()
     gameScreen.setWindowName(windowName)
@@ -52,11 +60,41 @@ object Main {
       for (singlePlayer <- playersList) {
         println(singlePlayer.characterName)
         maximizeWindow(singlePlayer.windowID)
-        singlePlayer.updateCharWindow(makeScreenshotMat(singlePlayer.windowID, singlePlayer.characterName))
+        singlePlayer.updateGeneral()
 
-        locateLoot(singlePlayer)
-        Thread.sleep(5000)
+//        var caveBotTestClass = new CaveBot("testPath")
+////         create a cavebot path
+//        for (i <- 1 to 4) {
+//          singlePlayer.updateGeneral()
+//          recordWaypoints(singlePlayer, caveBotTestClass)
+//          Thread.sleep(5000)
+//        }
+//        caveBotTestClass.saveStateToFile(caveBotTestClass.getCaveBotName())
+//        println("Saved")
+//        Thread.sleep(20000)
 
+        var caveBotTestClass = new CaveBot("testPath")
+        caveBotTestClass.loadStateFromFile("classes/cavebot/testPath.ser")
+        println("In 3 seconds cavebot initialization.")
+        Thread.sleep(4000)
+        for (i <- 1 to 4) {
+          singlePlayer.updateGeneral()
+          followWaypoints(singlePlayer, caveBotTestClass)
+          Thread.sleep(4000)
+        }
+        print("Finished the route")
+
+
+
+
+//        moveToNextWaypoint(singlePlayer)
+
+//        singlePlayer.autoheal(exura =Some(230), IH=Some(170))
+//        locateLoot(singlePlayer)
+
+
+      }
+    }
 
 
 
@@ -71,7 +109,6 @@ object Main {
 //        }
 
 
-      }
-    }
+
   }
 }

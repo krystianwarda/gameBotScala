@@ -1,4 +1,4 @@
-//package player
+package player
 
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
@@ -9,13 +9,20 @@ import utils.core.randomSleep
 import java.io.File
 
 object Spells {
-  val UH: String = "adura vita"
-  val IH: String = "adura gran"
-  val HMM: String = "adori gran"
 
   def castSpell(spell: String): Unit = {
+    randomSleep(0.2,0.3,0.5)
     sendText(spell)
-    randomSleep(3,1,3)
+  }
+
+  def castSpellSlow(spell: String): Unit = {
+    randomSleep(1, 0.5, 1)
+    sendText(spell)
+  }
+
+  def castSpellFast(spell: String): Unit = {
+    randomSleep(0.2, 0.3, 0.5)
+    sendText(spell)
   }
 
   def castSpellMultiple(spell: String, castTimes: Int): Unit = {

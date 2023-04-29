@@ -1,5 +1,7 @@
 package utils
 
+import io.circe.generic.auto.exportEncoder
+
 import java.awt.{Desktop, Robot, Toolkit}
 import java.awt.event.KeyEvent
 import scala.concurrent.duration._
@@ -11,13 +13,12 @@ import java.time.Instant
 import java.awt.{Rectangle, Robot}
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
-import java.io.File
-import java.awt.{Dimension, Rectangle, Robot, Toolkit}
-import java.io.File
+import java.io.{File, FileOutputStream, ObjectOutputStream}
 import javax.imageio.ImageIO
 import scala.collection.JavaConverters._
 import org.opencv.imgproc.Imgproc
 import org.opencv.imgcodecs.Imgcodecs
+import io.circe.syntax._
 
 import scala.util.Random
 import scala.concurrent.duration._
@@ -28,7 +29,13 @@ import utils.gameScreen
 import java.awt.Robot
 import java.awt.event.InputEvent
 import player.Player
-import utils.image.{loadImage, makeScreenshot, makeScreenshotID}
+import radar.core.{cutRadarImage, getRadarCenterLoc}
+//import radar.core.locatePosition
+import utils.image.{getCenterLoc, loadImage, makeScreenshot, makeScreenshotID}
+
+import java.nio.charset.StandardCharsets
+import io.circe._
+import io.circe.generic.semiauto._
 
 object core {
 
@@ -45,7 +52,11 @@ object core {
             val windowTitle = Seq("xdotool", "getwindowname", windowID).!!.trim
             val characterName = windowTitle.split(" - ")(1).replaceAll("\\s", "_")
             var screenshotPath = makeScreenshotID(windowID, characterName)
-            new Player(windowID, characterName,loadImage(screenshotPath))
+            var characterWindow = loadImage(screenshotPath)
+            var centerLoc = getCenterLoc(characterWindow)
+            var radarImage = cutRadarImage(characterWindow)
+            var radarCenterLoc = getRadarCenterLoc(characterWindow)
+            new Player(windowID, characterName,characterWindow, centerLoc, radarImage, radarCenterLoc)
         }
     }
     def detectWindows(windowName: String): List[String] = {
@@ -98,9 +109,13 @@ object core {
 //        val randomTime = (2 + Random.nextInt(3)).seconds
 //        Thread.sleep(randomTime.toMillis)
 //    }
+
     def randomNumber(baseNumber: Int, randomNumber1: Int, randomNumber2: Int): Int = {
-        baseNumber + Random.between(randomNumber1, randomNumber2 + 1)
+        baseNumber + Random.nextInt(randomNumber2 - randomNumber1 + 1) + randomNumber1
     }
+//    def randomNumber(baseNumber: Int, randomNumber1: Int, randomNumber2: Int): Int = {
+//        baseNumber + Random.between(randomNumber1, randomNumber2 + 1)
+//    }
 
     def randomDirection(): String = {
         val directions = Array("left", "right", "top", "bottom")
@@ -108,10 +123,15 @@ object core {
         directions(randomIndex)
     }
 
-    def randomSleep(baseTime: Int, randomTime1: Int, randomTime2: Int): Unit = {
-        val randomPause = (baseTime + Random.nextInt(randomTime2 - randomTime1 + 1) + randomTime1).seconds
+    def randomSleep(baseTime: Double, randomTime1: Double, randomTime2: Double): Unit = {
+        val randomPause = (baseTime + Random.nextDouble() * (randomTime2 - randomTime1) + randomTime1).seconds
         Thread.sleep(randomPause.toMillis)
     }
+
+//    def randomSleep(baseTime: Double, randomTime1: Double, randomTime2: Double): Unit = {
+//        val randomPause = (baseTime + Random.nextInt(randomTime2 - randomTime1 + 1) + randomTime1).seconds
+//        Thread.sleep(randomPause.toMillis)
+//    }
 
 //    def maximizeWindow(windowID: String): Unit = {
 //        // Check if the window is minimized
@@ -184,6 +204,24 @@ object core {
         robot.keyPress(KeyEvent.VK_RIGHT)
         robot.keyRelease(KeyEvent.VK_RIGHT)
     }
+
+//    def saveStateToFile(fileName: String, filePath: String): Unit = {
+//        val file = new File(filePath + fileName + ".dat")
+//        val outputStream = new ObjectOutputStream(new FileOutputStream(file))
+//        outputStream.writeObject(this)
+//        outputStream.close()
+//    }
+
+//    def saveStateToFile(fileName: String, filePath: String): Unit = {
+//        val file = new File(filePath + fileName + ".json")
+//        val json = this.asJson.noSpaces
+//        val outputStream = new java.io.BufferedWriter(
+//            new java.io.OutputStreamWriter(
+//                new java.io.FileOutputStream(file),
+//                StandardCharsets.UTF_8))
+//        outputStream.write(json)
+//        outputStream.close()
+//    }
 }
 
 

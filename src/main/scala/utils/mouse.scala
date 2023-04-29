@@ -7,13 +7,17 @@ import java.awt.event.KeyEvent
 
 object mouse {
 
-    val robot = new Robot()
+  val robot = new Robot()
 
-    def leftClick(x: Int, y: Int): Unit = {
-    robot.mouseMove(x, y)
-    robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
-    robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
+
+  def leftClick(loc: Option[(Int, Int)]): Unit = {
+    loc.foreach { case (x, y) =>
+      robot.mouseMove(x, y)
+      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
+      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
     }
+  }
+
   def rightClick(loc: Option[(Int, Int)]): Unit = {
     loc.foreach { case (x, y) =>
       robot.mouseMove(x, y)
@@ -39,6 +43,16 @@ object mouse {
       robot.mouseMove(x, y)
     }
 
+    def dragUseOnChar(loc1: Option[(Int, Int)], loc2: Option[(Int, Int)]): Unit = {
+      mouseMoveSmooth(loc1)
+      robot.mousePress(InputEvent.BUTTON3_DOWN_MASK) // Press right click
+      robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK) // Release right click
+
+      mouseMoveSmooth(loc2)
+      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK) // Press left click
+      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK) // Release left click
+    }
+
     def mouseMoveSmooth(loc: Option[(Int, Int)]): Unit = {
       loc.foreach { case (x, y) =>
         val currentLoc = MouseInfo.getPointerInfo.getLocation
@@ -46,7 +60,7 @@ object mouse {
         val yStep = (y - currentLoc.getY).toInt / 10
         for (i <- 1 to 10) {
           robot.mouseMove(currentLoc.getX.toInt + i * xStep, currentLoc.getY.toInt + i * yStep)
-          Thread.sleep(10)
+          Thread.sleep(50)
         }
       }
     }

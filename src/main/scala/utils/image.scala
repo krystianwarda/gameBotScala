@@ -1,7 +1,18 @@
 package utils
+
+import net.jpountz.xxhash.XXHashFactory
+
+import java.awt.image.BufferedImage
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
+import java.nio.ByteBuffer
+import java.nio.file.{Files, Path, Paths}
+import javax.imageio.ImageIO
+import scala.collection.mutable.ArrayBuffer
 import java.util.ArrayList
 import org.bytedeco.javacpp.Loader
-import org.opencv.core.{Core, CvType, MatOfPoint2f, Rect, Scalar}
+import org.opencv.core.{Core, CvType, MatOfPoint2f, Rect, Scalar, Size}
+import org.opencv.core._
+import org.opencv.imgproc.Imgproc
 
 import java.nio.file.Files
 //import org.bytedeco.javacpp.opencv_core.Mat
@@ -60,7 +71,12 @@ import utils.mouse.mouseMoveSmooth
 import org.opencv.core.Mat
 import org.opencv.core.Point
 import org.opencv.core.Core.MinMaxLocResult
-
+import org.opencv.core.Core
+import org.opencv.core.CvType
+import org.opencv.core.Mat
+import org.opencv.imgcodecs.Imgcodecs
+//  import org.opencv.core.{CvType, Mat, Scalar}
+//  import org.opencv.imgproc.Imgproc
 
 
 object image {
@@ -152,6 +168,43 @@ object image {
     hsvImage
   }
 
+  def cutOutRectangleImage(mainImage: Mat, point: Option[(Int, Int)], rectWidth: Int, rectHeight: Int): Mat = {
+    point.foreach { case (x, y) =>
+      // Calculate the top left corner point of the rectangle
+      val topLeftPoint = new Point(x - rectWidth / 2, y - rectHeight / 2)
+
+      // Create a new Mat object for the cut-out rectangle
+      val rectImage = new Mat(mainImage, new Rect(topLeftPoint, new Size(rectWidth, rectHeight)))
+
+      // Save the cut-out rectangle to a PNG file
+      Imgcodecs.imwrite("rectangle.png", rectImage)
+
+      // Return the cut-out rectangle Mat object
+      return rectImage
+    }
+
+    // If point is None, return an empty Mat object
+    new Mat()
+  }
+
+  def cutOutSquareImage(mainImage: Mat, point: Option[(Int, Int)], squareSideLength: Int): Mat = {
+    point.foreach { case (x, y) =>
+      // Calculate the top left corner point of the square
+      val topLeftPoint = new Point(x - squareSideLength/2, y - squareSideLength/2)
+
+      // Create a new Mat object for the cut-out square
+      val squareImage = new Mat(mainImage, new Rect(topLeftPoint, new Size(squareSideLength, squareSideLength)))
+
+      // Save the cut-out square to a PNG file
+      Imgcodecs.imwrite("square.png", squareImage)
+
+      // Return the cut-out square Mat object
+      return squareImage
+    }
+
+    // If point is None, return an empty Mat object
+    new Mat()
+  }
   def getLocationFromImageMidLeft(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
     // Convert images to HSV format
     val tempImageHSV = new Mat()
@@ -213,10 +266,11 @@ object image {
     var locations = ListBuffer.empty[Option[(Int, Int)]]
     for (str <- stringList) {
       val tempImage = loadImage(s"images/screenInfo/$str.png")
-      val tempLoc = getLocationFromImage(tempImage, mainImage, getSideFromFilename(str))
+      val tempLoc = getLocationFromImageMidMatchTemp(tempImage, mainImage)
       locations ++= tempLoc.map(Some(_))
+//      println(str)
       Thread.sleep(1000)
-      mouseMoveSmooth(tempLoc)
+//      mouseMoveSmooth(tempLoc)
     }
     getCenterPoint(locations.toList)
   }
@@ -258,7 +312,18 @@ object image {
     }
   }
 
-
+  def convertImageToArray(image: Mat): Array[Array[Int]] = {
+    val width = image.cols
+    val height = image.rows
+    val arr = Array.ofDim[Int](height, width)
+    for (y <- 0 until height) {
+      for (x <- 0 until width) {
+        val rgb = image.get(y, x).head.toInt & 0xFFFFFF // get the BGR values and mask out the alpha channel
+        arr(y)(x) = rgb
+      }
+    }
+    arr
+  }
 
 //  def getLocationFromImage(tempImage: Mat, mainImage: Mat, imageSide: String): Option[(Int, Int)] = {
 //    // Convert images to HSV format
@@ -350,8 +415,335 @@ object image {
     }
   }
 
-  import org.opencv.core._
-  import org.opencv.imgproc.Imgproc
+  def getLocationFromImageMidMatchTempLowConf(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
+    // Create the result matrix
+    val result = new Mat()
+    val matchMethod = Imgproc.TM_CCOEFF_NORMED
+    Imgproc.matchTemplate(mainImage, tempImage, result, matchMethod)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.5) {
+      // Return the location of the center of the matched area
+      val centerX = (minMaxLoc.maxLoc.x + tempImage.cols / 2).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImage.rows / 2).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
+
+
+  def getLocationFromImageHashMidMatchLowConf(tempImageBytes: Array[Byte], mainImage: Mat): Option[(Int, Int)] = {
+    // Convert the byte array to a Mat object
+    val tempImage = {
+      val inputStream = new ByteArrayInputStream(tempImageBytes)
+      val bufferedImage = ImageIO.read(inputStream)
+      val mat = new Mat(bufferedImage.getHeight, bufferedImage.getWidth, CvType.CV_8UC3)
+      val data = bufferedImage.getData.getPixels(0, 0, bufferedImage.getWidth, bufferedImage.getHeight, new Array[Int](bufferedImage.getWidth * bufferedImage.getHeight * 3))
+      mat.put(0, 0, data)
+      mat
+    }
+
+    // Create the result matrix
+    val result = new Mat()
+    val matchMethod = Imgproc.TM_CCOEFF_NORMED
+    Imgproc.matchTemplate(mainImage, tempImage, result, matchMethod)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.8) {
+      // Return the location of the center of the matched area
+      val centerX = (minMaxLoc.maxLoc.x + tempImage.cols / 2).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImage.rows / 2).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
+
+  def hashit(mat: Mat): Array[Byte] = {
+    val rows = mat.rows()
+    val cols = mat.cols()
+    val channels = mat.channels()
+    val dataType = mat.`type`()
+    val pixelCount = rows * cols
+    val buffer = ByteBuffer.allocate(pixelCount * channels * CvType.ELEM_SIZE(dataType))
+
+    for (row <- 0 until rows) {
+      for (col <- 0 until cols) {
+        val pixel = new Array[Float](channels)
+        mat.get(row, col, pixel)
+        for (channel <- 0 until channels) {
+          dataType match {
+            case CvType.CV_32FC1 =>
+              buffer.putFloat(pixel(channel))
+            case CvType.CV_8UC1 =>
+              buffer.put(pixel(channel).toByte)
+            case CvType.CV_16UC1 =>
+              buffer.putShort(pixel(channel).toShort)
+            case _ =>
+              throw new UnsupportedOperationException(s"Unsupported data type: $dataType")
+          }
+        }
+      }
+    }
+
+    buffer.array()
+  }
+
+
+  def fromBytes(bytes: Array[Byte]): Mat = {
+    val hashBytes = bytes.slice(0, 4)
+    val dimensions = bytes.slice(4, 8)
+    val rows = dimensions(0) & 0xff
+    val cols = dimensions(1) & 0xff
+    val channels = dimensions(2) & 0xff
+    val dataType = dimensions(3) & 0xff
+    val dataBytes = bytes.slice(8, bytes.length)
+    val mat = new Mat(rows, cols, dataType)
+    val buffer = ByteBuffer.wrap(dataBytes)
+
+    for (row <- 0 until rows) {
+      for (col <- 0 until cols) {
+        val pixel = new Array[Float](channels)
+        dataType match {
+          case CvType.CV_32FC1 =>
+            for (channel <- 0 until channels) {
+              pixel(channel) = buffer.getFloat()
+            }
+          case CvType.CV_8UC1 =>
+            for (channel <- 0 until channels) {
+              pixel(channel) = (buffer.get() & 0xff).toFloat
+            }
+          case _ =>
+            throw new UnsupportedOperationException(s"Unsupported data type: $dataType")
+        }
+        mat.put(row, col, pixel)
+      }
+    }
+    mat
+  }
+
+//  def saveMatToDatFile(mat: Mat, filename: String): Unit = {
+//    val buffer = new Array[Byte](mat.total() * mat.elemSize().toInt)
+//    mat.get(0, 0, buffer)
+//    val stream = new FileOutputStream(new File(filename))
+//    val objStream = new ObjectOutputStream(stream)
+//    objStream.writeObject(buffer)
+//    objStream.close()
+//    stream.close()
+//  }
+//  def loadMatFromDatFile(filename: String, rows: Int, cols: Int, `type`: Int): Mat = {
+//    val stream = new FileInputStream(new File(filename))
+//    val objStream = new ObjectInputStream(stream)
+//    val buffer = objStream.readObject().asInstanceOf[Array[Byte]]
+//    objStream.close()
+//    stream.close()
+//    val mat = new Mat(rows, cols, `type`)
+//    mat.put(0, 0, buffer)
+//    mat
+//  }
+
+  def hashMat(mat: Mat): (Int, Int, String) = {
+    val seed: Int = 20220605
+    val byteBuffer: ByteBuffer = ByteBuffer.allocate(mat.total.toInt * mat.elemSize.toInt)
+    mat.get(0, 0, byteBuffer.array())
+    val xxHashFactory: XXHashFactory = XXHashFactory.fastestInstance()
+    val xxHash: net.jpountz.xxhash.XXHash32 = xxHashFactory.hash32()
+    val hashValue: Int = xxHash.hash(byteBuffer.array(), byteBuffer.arrayOffset() + byteBuffer.position(), byteBuffer.remaining(), seed)
+    val hashString: String = Integer.toHexString(hashValue)
+    (seed, hashValue, hashString)
+  }
+
+  def hashitHex(arr: Array[Int]): (Int, Int, String) = {
+    val seed: Int = 20220605
+    val byteBuffer: ByteBuffer = ByteBuffer.allocate(arr.length * 4)
+    byteBuffer.asIntBuffer.put(arr)
+    val xxHashFactory: XXHashFactory = XXHashFactory.fastestInstance()
+    val xxHash: net.jpountz.xxhash.XXHash32 = xxHashFactory.hash32()
+    val hashValue: Int = xxHash.hash(byteBuffer.array(), byteBuffer.arrayOffset() + byteBuffer.position(), byteBuffer.remaining(), seed)
+    val hashString: String = Integer.toHexString(hashValue)
+    (seed, hashValue, hashString)
+  }
+
+  def matToArray(mat: Mat): Array[Array[Int]] = {
+    val width = mat.cols()
+    val height = mat.rows()
+    val channels = mat.channels()
+    val pixels = Array.ofDim[Int](height, width)
+
+    // Convert image to BGR color space if necessary
+    val bgrMat = if (channels == 4) {
+      val bgraMat = new Mat()
+      Imgproc.cvtColor(mat, bgraMat, Imgproc.COLOR_BGRA2BGR)
+      bgraMat
+    } else if (channels == 1) {
+      val grayMat = new Mat()
+      Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_GRAY2BGR)
+      grayMat
+    } else {
+      mat
+    }
+
+    for (y <- 0 until height) {
+      for (x <- 0 until width) {
+        channels match {
+          case 1 => pixels(y)(x) = bgrMat.get(y, x)(0).toInt
+          case 3 => {
+            val bgr = bgrMat.get(y, x)
+            val b = bgr(0).toInt & 0xFF
+            val g = bgr(1).toInt & 0xFF
+            val r = bgr(2).toInt & 0xFF
+            val pixelValue = (r << 16) | (g << 8) | b
+            pixels(y)(x) = pixelValue
+          }
+          case _ => throw new UnsupportedOperationException("Unsupported number of channels")
+        }
+      }
+    }
+
+    // Release the intermediate matrix if it was created
+    if (bgrMat != mat) {
+      bgrMat.release()
+    }
+
+    pixels
+  }
+
+
+  def arrayToMat(pixels: Array[Array[Int]]): Mat = {
+    val height = pixels.length
+    val width = pixels(0).length
+    val mat = new Mat(height, width, CvType.CV_8UC3)
+    for (y <- 0 until height) {
+      for (x <- 0 until width) {
+        val rgb = pixels(y)(x)
+        val r = (rgb >> 16) & 0xFF
+        val g = (rgb >> 8) & 0xFF
+        val b = rgb & 0xFF
+        mat.put(y, x, Array(b.toByte, g.toByte, r.toByte))
+      }
+    }
+    mat
+  }
+
+
+        //  def matToArray(mat: Mat): Array[Array[Int]] = {
+//    val width = mat.cols()
+//    val height = mat.rows()
+//    val channels = mat.channels()
+//    val pixels = new Array[Array[Int]](height)
+//    for (y <- 0 until height) {
+//      pixels(y) = new Array[Int](width)
+//      for (x <- 0 until width) {
+//        channels match {
+//          case 1 => pixels(y)(x) = mat.get(y, x)(0).toInt
+//          case 3 => {
+//            val bgr = mat.get(y, x)
+//            val b = bgr(0).toInt & 0xFF
+//            val g = bgr(1).toInt & 0xFF
+//            val r = bgr(2).toInt & 0xFF
+//            val pixelValue = (b << 16) | (g << 8) | r
+//            pixels(y)(x) = pixelValue
+//          }
+//          case _ => throw new UnsupportedOperationException("Unsupported number of channels")
+//        }
+//      }
+//    }
+//    pixels
+//  }
+//
+//  def arrayToMat(pixels: Array[Array[Int]]): Mat = {
+//    val height = pixels.length
+//    val width = pixels(0).length
+//    val mat = new Mat(height, width, CvType.CV_8UC3)
+//    for (y <- 0 until height) {
+//      for (x <- 0 until width) {
+//        val rgb = pixels(y)(x)
+//        val r = (rgb >> 16) & 0xFF
+//        val g = (rgb >> 8) & 0xFF
+//        val b = rgb & 0xFF
+//        mat.put(y, x, Array(b.toByte, g.toByte, r.toByte))
+//      }
+//    }
+//    mat
+//  }
+
+
+//
+//  def matToArray(mat: Mat): Array[Array[Int]] = {
+//    val width = mat.cols()
+//    val height = mat.rows()
+//    val channels = mat.channels()
+//    val pixels = new Array[Array[Int]](height)
+//    for (y <- 0 until height) {
+//      pixels(y) = new Array[Int](width)
+//      for (x <- 0 until width) {
+//        channels match {
+//          case 1 => pixels(y)(x) = mat.get(y, x)(0).toInt
+//          case 3 => {
+//            val bgr = mat.get(y, x)
+//            val b = bgr(0).toInt & 0xFF
+//            val g = bgr(1).toInt & 0xFF
+//            val r = bgr(2).toInt & 0xFF
+//            val pixelValue = (r << 16) | (g << 8) | b
+//            pixels(y)(x) = pixelValue
+//          }
+//          case _ => throw new UnsupportedOperationException("Unsupported number of channels")
+//        }
+//      }
+//    }
+//    pixels
+//  }
+//
+//  def arrayToMat(pixels: Array[Array[Int]]): Mat = {
+//    val height = pixels.length
+//    val width = pixels(0).length
+//    val mat = new Mat(height, width, CvType.CV_8UC3)
+//    for (y <- 0 until height) {
+//      for (x <- 0 until width) {
+//        val rgb = pixels(y)(x)
+//        val b = (rgb >> 16) & 0xFF
+//        val g = (rgb >> 8) & 0xFF
+//        val r = rgb & 0xFF
+//        mat.put(y, x, Array(b.toByte, g.toByte, r.toByte))
+//      }
+//    }
+//    mat
+//  }
+
+  def saveMatToFile(mat: Mat, filename: String): Boolean = {
+    Imgcodecs.imwrite(filename + ".png", mat)
+  }
+
+
+//  def matToArray(mat: Mat): Array[Array[Double]] = {
+//    val rows = mat.rows
+//    val cols = mat.cols
+//    val arr = Array.ofDim[Double](rows, cols)
+//    for (i <- 0 until rows; j <- 0 until cols) {
+//      arr(i)(j) = mat.get(i, j)(0)
+//    }
+//    arr
+//  }
+
+//  def arrayToMat(arr: Array[Array[Double]]): Mat = {
+//    val rows = arr.length
+//    val cols = arr.head.length
+//    val mat = new Mat(rows, cols, CvType.CV_64FC1)
+//    for (i <- 0 until rows; j <- 0 until cols) {
+//      mat.put(i, j, arr(i)(j))
+//    }
+//    mat
+//  }
+
 
   def getLocationFromImageMidMatchTemp(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
     // Create the result matrix
@@ -374,8 +766,40 @@ object image {
     }
   }
 
-  import org.opencv.core._
-  import org.opencv.imgproc.Imgproc
+  def getLocationFromImageMidEdgeDetectLowConf(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
+    // Convert images to grayscale
+    val tempImageGray = new Mat()
+    val mainImageGray = new Mat()
+    Imgproc.cvtColor(tempImage, tempImageGray, Imgproc.COLOR_BGR2GRAY)
+    Imgproc.cvtColor(mainImage, mainImageGray, Imgproc.COLOR_BGR2GRAY)
+
+    // Detect edges
+    val tempImageEdges = new Mat()
+    val mainImageEdges = new Mat()
+    val threshold1 = 50
+    val threshold2 = 200
+    val apertureSize = 3
+    Imgproc.Canny(tempImageGray, tempImageEdges, threshold1, threshold2, apertureSize, false)
+    Imgproc.Canny(mainImageGray, mainImageEdges, threshold1, threshold2, apertureSize, false)
+
+    // Create the result matrix
+    val result = new Mat()
+    Imgproc.matchTemplate(mainImageEdges, tempImageEdges, result, Imgproc.TM_CCOEFF_NORMED)
+
+    // Find the best match location
+    val minMaxLoc = Core.minMaxLoc(result)
+
+    // Check if the match is good enough
+    if (minMaxLoc.maxVal > 0.70) {
+      // Return the location of the center of the matched area
+      val centerX = (minMaxLoc.maxLoc.x + tempImage.cols / 2).toInt
+      val centerY = (minMaxLoc.maxLoc.y + tempImage.rows / 2).toInt
+      Some((centerX, centerY))
+    } else {
+      println("Not found")
+      None
+    }
+  }
 
   def getLocationFromImageMidEdgeDetect(tempImage: Mat, mainImage: Mat): Option[(Int, Int)] = {
     // Convert images to grayscale
@@ -877,8 +1301,8 @@ object image {
 
     // Return the path of the saved file
     file.getAbsolutePath
-
   }
+
   def makeScreenshot(windowName: String): Unit = {
     // Window name
     val windowSubstring = windowName
