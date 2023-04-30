@@ -2,7 +2,7 @@
 import cavebot.{CaveBot, core}
 import cavebot.core.{followWaypoints, locateLoot, moveToNextWaypoint, recordWaypoints}
 import radar.core.findCharLocation
-
+import userUI.SwingApp
 import utils.image.getLocationFromImageMidMatchTemp
 import utils.mouse.{leftClick, rightClick}
 
@@ -48,9 +48,9 @@ import cavebot.CaveBot
 object Main {
 
   def main(args: Array[String]): Unit = {
-    val app = new userUI.swingApp
-    app.main(Array())
-//    loadOpenCVSettings()
+//    val app = new userUI.swingApp
+
+    loadOpenCVSettings()
 //    gameScreen.setWindowName(windowName)
 //    gameScreen.setWindowId(getWindowId(windowName))
 
@@ -61,7 +61,11 @@ object Main {
 //    val minNeighbors = 3 // minimum number of neighbors for object detection
 //    makeScreenshot(windowName)
 //
-//    val playersList = detectPlayerWindows(windowName)
+
+    val playersList = detectPlayerWindows(windowName)
+    val app = new SwingApp(playersList)
+    app.main(Array())
+
     while (true) {
       Thread.sleep(200000000)
     }

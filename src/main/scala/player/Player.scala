@@ -20,17 +20,31 @@ class Player(val windowID: String,
              var centerLoc: Option[(Int, Int)],
              var radarImage: Mat,
              var radarCenterLoc: Option[(Int, Int)]) {
-  var charExperience: Int = 9999
-  var charLevel: Int = 9999
-  var healthPoints: Int = 9999
-  var manaPoints: Int = 9
-  var soulPoints: Int = 9999
-  var capacityValue = 9999
-  var magicLevel: Int = 9999
+  // bot settings values
+  var botStrongHealSpell: String = ""
+  var botStrongHealHealth: Int = 0
+  var botStrongHealMana: Int = 0
+  var botLightHealSpell: String = ""
+  var botLightHealValue: Int = 0
+  var botLightHealMana: Int = 0
+
+
+
+  // window values
+  var charExperience: Int = 0
+  var charLevel: Int = 0
+  var healthPoints: Int = 0
+  var manaPoints: Int = 0
+  var soulPoints: Int = 0
+  var capacityValue = 0
+  var magicLevel: Int = 0
   var lastMealTimestamp: Long = System.currentTimeMillis / 1000
   var lastCharacterRotation: Long = System.currentTimeMillis() / 1000
   var helmetLocation: Option[(Int, Int)] = None
   var armorLocation: Option[(Int, Int)] = None
+
+
+
 
 
   def setExperienceValue(value: Int): Unit = {

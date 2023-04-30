@@ -21,7 +21,8 @@ libraryDependencies ++= Seq(
   "net.jpountz.lz4" % "lz4" % "1.3.0",
   "io.circe" %% "circe-core" % "0.14.1",
   "io.circe" %% "circe-generic" % "0.14.1",
-  "org.scala-lang.modules" %% "scala-swing" % "2.1.1"
+  "org.scala-lang.modules" %% "scala-swing" % "2.1.1",
+  "io.monix" %% "monix" % "3.4.0"
 )
 
 //"org.scala-lang" % "scala-library" % "2.11.12"
