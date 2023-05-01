@@ -20,14 +20,12 @@ class Player(val windowID: String,
              var centerLoc: Option[(Int, Int)],
              var radarImage: Mat,
              var radarCenterLoc: Option[(Int, Int)]) {
-  // bot settings values
-  var botStrongHealSpell: String = ""
-  var botStrongHealHealth: Int = 0
-  var botStrongHealMana: Int = 0
-  var botLightHealSpell: String = ""
-  var botLightHealValue: Int = 0
-  var botLightHealMana: Int = 0
 
+  // bot settings values
+  var autoHealPanelClass: String = ""
+  var botLightHealSpell: String = ""
+  var botLightHealHealth: Int = 0
+  var botLightHealMana: Int = 0
 
 
   // window values
@@ -42,6 +40,30 @@ class Player(val windowID: String,
   var lastCharacterRotation: Long = System.currentTimeMillis() / 1000
   var helmetLocation: Option[(Int, Int)] = None
   var armorLocation: Option[(Int, Int)] = None
+
+  def getCharLevel(): Int = {
+    return charLevel
+  }
+
+
+  def setBotLightHealSpell (text: String): Unit = {
+    botLightHealSpell = text
+  }
+  def setBotLightHealHealth(value: Int): Unit = {
+    botLightHealHealth = value
+  }
+  def setBotLightHealMana(value: Int): Unit = {
+    botLightHealMana = value
+  }
+  def getBotLightHealSpell(value: Int): Unit = {
+    return botLightHealSpell
+  }
+  def getBotLightHealth(value: Int): Unit = {
+    return botLightHealHealth
+  }
+  def getBotLightHealMana(value: Int): Unit = {
+    return botLightHealMana
+  }
 
 
 
@@ -125,6 +147,8 @@ class Player(val windowID: String,
   def getRadarImage(): Mat = {
     return radarImage
   }
+
+
 
   def getRadarCenterLoc(): Option[(Int, Int)] = {
     return radarCenterLoc

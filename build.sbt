@@ -22,6 +22,7 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-core" % "0.14.1",
   "io.circe" %% "circe-generic" % "0.14.1",
   "org.scala-lang.modules" %% "scala-swing" % "2.1.1",
+  "org.scalafx" %% "scalafx" % "8.0.102-R11",
   "io.monix" %% "monix" % "3.4.0"
 )
 
@@ -35,3 +36,4 @@ libraryDependencies ++= Seq(
 //
 //"org.scalafx" %% "scalafx" % "12.0.2-R18",
 //"org.openjfx" % "javafx-controls" % "20"
+//  "org.scalafx" %% "scalafx" % "12.0.2-R18",

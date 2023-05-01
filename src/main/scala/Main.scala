@@ -67,8 +67,18 @@ object Main {
     app.main(Array())
 
     while (true) {
-      Thread.sleep(200000000)
+      for (singlePlayer <- playersList) {
+        maximizeWindow(singlePlayer.windowID)
+        singlePlayer.updateGeneral()
+        println(singlePlayer.characterName)
+        println(singlePlayer.charLevel)
+        println(singlePlayer.botLightHealSpell)
+        println(singlePlayer.botLightHealHealth)
+        println(singlePlayer.botLightHealMana)
+        Thread.sleep(10000)
+      }
     }
+
 //      println("Start...")
 //      for (singlePlayer <- playersList) {
 //        println(singlePlayer.characterName)
