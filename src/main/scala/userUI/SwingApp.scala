@@ -47,124 +47,196 @@ import scalafx.Includes._
 //import monix.execution.Scheduler.Implicits.global
 
 
-class SwingApp(playerList: Seq[Player]) extends SimpleSwingApplication {
 
-  val selectedPlayerVar = ObjectProperty(playerList.head) // declare as a field of the class
+case class SwingApp(examples: List[player.Player]) extends MainFrame {
+  title = "Example App"
+  preferredSize = new Dimension(400, 300)
 
-  def top = new MainFrame {
-    title = "TibiaYBB - Younger Brother Bot"
-
-    val tabs = new TabbedPane {
-      pages += new TabbedPane.Page("Activate", activatePanel(playerList))
-      pages += new TabbedPane.Page("Auto Heal", autoHealPanel(playerList))
-    }
-
-    listenTo(tabs.selection)
-
-    reactions += {
-      case SelectionChanged(_) =>
-        updateTabs(selectedPlayerVar(), tabs.selection.page.content)
-    }
-    //        updateAutoHealValues(selectedPlayerVar(), tabs.selection.page.content)
-
-    contents = tabs
-    font = new Font("Helvetica", Font.PLAIN, 8)
-    size = new Dimension(600, 400)
-
-    def updateAutoHealValues(player: Player, panel: BoxPanel): Unit = {
-      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
-      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
-      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
-
-      val spellTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealSpellField.peer => tf }
-      val healthTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealHealthField.peer => tf }
-      val manaTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealManaField.peer => tf }
-      spellTextField.foreach(_.text = player.botLightHealSpell)
-      healthTextField.foreach(_.text = player.botLightHealHealth.toString)
-      manaTextField.foreach(_.text = player.botLightHealMana.toString)
-    }
-
-    def updateTabs(player: Player, component: Component): Unit = {
-      component match {
-        case activatePanel: BoxPanel =>
-          val nameLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
-          val levelLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
-          nameLabel.foreach(_.text = s"Character ${player.characterName}")
-          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
-        case autoHealPanel: BoxPanel =>
-          val nameLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
-          val levelLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
-          nameLabel.foreach(_.text = s"Character ${player.characterName}")
-          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
-          updateAutoHealValues(player, autoHealPanel)
-        case _ =>
-      }
-    }
-
-
-    def activatePanel(playerList: Seq[Player]): BoxPanel = new BoxPanel(Orientation.Vertical) {
-      // Declare nameLabel and levelLabel as var variables
-      var nameLabel: Label = _
-      var levelLabel: Label = _
-
-      // Create a combo box to select the active player
-      val playerComboBox = new ComboBox(playerList) {
-        renderer = Renderer(_.characterName)
-        selection.item = selectedPlayerVar()
-      }
-
-      // Add a listener to the combo box that updates the selected player variable and the auto-heal values in the text fields
-      playerComboBox.selection.reactions += {
-        case SelectionChanged(_) =>
-          selectedPlayerVar() = playerComboBox.selection.item
-          updateTabs(selectedPlayerVar(), this)
-      }
-
-      // Create a label to display the selected player's name and assign to nameLabel
-      nameLabel = new Label(s"Character ${selectedPlayerVar().characterName}")
-
-      // Create a label to display the selected player's level and assign to levelLabel
-      levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
-
-      // Add the label, combo box, and button to the panel
-      contents += playerComboBox
-      contents += nameLabel
-      contents += levelLabel
-    }
-
-    def autoHealPanel(playerList: Seq[Player]) = new BoxPanel(Orientation.Vertical) {
-
-      val playerComboBox = new ComboBox(playerList) {
-        renderer = Renderer(_.characterName)
-        selection.item = selectedPlayerVar()
-      }
-
-      val nameLabel = new Label(s"Character ${selectedPlayerVar().characterName}")
-      val levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
-      val manaStatusLabel = new Label(s"Mana status: ${selectedPlayerVar().manaPoints}")
-      val spellLabel = new Label(s"Spell: ")
-      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
-      autoHealSpellField.columns = 10
-      val healthLabel = new Label("Health: ")
-      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
-      autoHealHealthField.columns = 5
-      val manaLabel = new Label("Mana: ")
-      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
-      autoHealManaField.columns = 5
-
-      contents += nameLabel
-      contents += levelLabel
-      contents += manaStatusLabel
-      contents += spellLabel
-      contents += autoHealSpellField
-      contents += healthLabel
-      contents += autoHealHealthField
-      contents += manaLabel
-      contents += autoHealManaField
-    }
-
+  def updateExample(): Unit = {
+    val selectedName = exampleDropdown.selection.item
+    val selectedExample = exampleMap(selectedName)
+    exampleLabel.text = s"Name: ${selectedExample.characterName}, Level: ${selectedExample.charLevel}"
+    intField1.text = selectedExample.botLightHealSpell.toString
+    intField2.text = selectedExample.botLightHealHealth.toString
+    intField3.text = selectedExample.botLightHealMana.toString
   }
+
+  def saveExample(): Unit = {
+    val selectedName = exampleDropdown.selection.item
+    val selectedExample = exampleMap(selectedName)
+    val newRandomVar1 = intField1.text
+    val newRandomVar2 = intField2.text.toInt
+    val newRandomVar3 = intField3.text.toInt
+    selectedExample.updateAutoHeal(newRandomVar1, newRandomVar2, newRandomVar3)
+  }
+
+  val exampleNames = examples.map(_.characterName)
+  val exampleMap = examples.map(e => e.characterName -> e).toMap
+
+  val exampleDropdown = new ComboBox(exampleNames)
+
+  val exampleLabel = new Label()
+  val intField1 = new TextField()
+  val intField2 = new TextField()
+  val intField3 = new TextField()
+
+  val updateButton = new Button("Update") {
+    reactions += {
+      case ButtonClicked(_) =>
+        saveExample()
+        updateExample()
+    }
+  }
+
+  contents = new TabbedPane {
+    pages += new TabbedPane.Page("Examples", new BoxPanel(Orientation.Vertical) {
+      contents += exampleDropdown
+
+      listenTo(exampleDropdown.selection)
+      reactions += {
+        case SelectionChanged(_) => updateExample()
+      }
+
+    })
+
+    pages += new TabbedPane.Page("Details", new BoxPanel(Orientation.Vertical) {
+      contents += exampleLabel
+      contents += new Label("Random 1:")
+      contents += intField1
+      contents += new Label("Random 2:")
+      contents += intField2
+      contents += new Label("Random 3:")
+      contents += intField3
+      contents += updateButton
+    })
+  }
+
+  updateExample()
 }
+
+
+//
+//class SwingApp(playerList: Seq[Player]) extends SimpleSwingApplication {
+//
+//
+//
+//
+//  val selectedPlayerVar = ObjectProperty(playerList.head) // declare as a field of the class
+//
+//  def top = new MainFrame {
+//    title = "TibiaYBB - Younger Brother Bot"
+//
+//    val tabs = new TabbedPane {
+//      pages += new TabbedPane.Page("Activate", activatePanel(playerList))
+//      pages += new TabbedPane.Page("Auto Heal", autoHealPanel(playerList))
+//    }
+//
+//    listenTo(tabs.selection)
+//
+//    reactions += {
+//      case SelectionChanged(_) =>
+//        updateTabs(selectedPlayerVar(), tabs.selection.page.content)
+//    }
+//    //        updateAutoHealValues(selectedPlayerVar(), tabs.selection.page.content)
+//
+//    contents = tabs
+//    font = new Font("Helvetica", Font.PLAIN, 8)
+//    size = new Dimension(600, 400)
+//
+//    def updateAutoHealValues(player: Player, panel: BoxPanel): Unit = {
+//      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
+//      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
+//      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
+//
+//      val spellTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealSpellField.peer => tf }
+//      val healthTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealHealthField.peer => tf }
+//      val manaTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealManaField.peer => tf }
+//      spellTextField.foreach(_.text = player.botLightHealSpell)
+//      healthTextField.foreach(_.text = player.botLightHealHealth.toString)
+//      manaTextField.foreach(_.text = player.botLightHealMana.toString)
+//    }
+//
+//    def updateTabs(player: Player, component: Component): Unit = {
+//      component match {
+//        case activatePanel: BoxPanel =>
+//          val nameLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
+//          val levelLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
+//          nameLabel.foreach(_.text = s"Character ${player.characterName}")
+//          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
+//        case autoHealPanel: BoxPanel =>
+//          val nameLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
+//          val levelLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
+//          nameLabel.foreach(_.text = s"Character ${player.characterName}")
+//          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
+//          updateAutoHealValues(player, autoHealPanel)
+//        case _ =>
+//      }
+//    }
+//
+//
+//    def activatePanel(playerList: Seq[Player]): BoxPanel = new BoxPanel(Orientation.Vertical) {
+//      // Declare nameLabel and levelLabel as var variables
+//      var nameLabel: Label = _
+//      var levelLabel: Label = _
+//
+//      // Create a combo box to select the active player
+//      val playerComboBox = new ComboBox(playerList) {
+//        renderer = Renderer(_.characterName)
+//        selection.item = selectedPlayerVar()
+//      }
+//
+//      // Add a listener to the combo box that updates the selected player variable and the auto-heal values in the text fields
+//      playerComboBox.selection.reactions += {
+//        case SelectionChanged(_) =>
+//          selectedPlayerVar() = playerComboBox.selection.item
+//          updateTabs(selectedPlayerVar(), this)
+//      }
+//
+//      // Create a label to display the selected player's name and assign to nameLabel
+//      nameLabel = new Label(s"Character ${selectedPlayerVar().characterName}")
+//
+//      // Create a label to display the selected player's level and assign to levelLabel
+//      levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
+//
+//      // Add the label, combo box, and button to the panel
+//      contents += playerComboBox
+//      contents += nameLabel
+//      contents += levelLabel
+//    }
+//
+//    def autoHealPanel(playerList: Seq[Player]) = new BoxPanel(Orientation.Vertical) {
+//
+//      val playerComboBox = new ComboBox(playerList) {
+//        renderer = Renderer(_.characterName)
+//        selection.item = selectedPlayerVar()
+//      }
+//
+//      val nameLabel = new Label(s"Character ${selectedPlayerVar().characterName}")
+//      val levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
+//      val manaStatusLabel = new Label(s"Mana status: ${selectedPlayerVar().manaPoints}")
+//      val spellLabel = new Label(s"Spell: ")
+//      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
+//      autoHealSpellField.columns = 10
+//      val healthLabel = new Label("Health: ")
+//      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
+//      autoHealHealthField.columns = 5
+//      val manaLabel = new Label("Mana: ")
+//      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
+//      autoHealManaField.columns = 5
+//
+//      contents += nameLabel
+//      contents += levelLabel
+//      contents += manaStatusLabel
+//      contents += spellLabel
+//      contents += autoHealSpellField
+//      contents += healthLabel
+//      contents += autoHealHealthField
+//      contents += manaLabel
+//      contents += autoHealManaField
+//    }
+//
+//  }
+//}
 
 
 

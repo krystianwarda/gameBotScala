@@ -27,6 +27,12 @@ class Player(val windowID: String,
   var botLightHealHealth: Int = 0
   var botLightHealMana: Int = 0
 
+  def updateAutoHeal(spell: String, health: Int, mana: Int): Unit = {
+    botLightHealSpell = spell
+    botLightHealHealth = health
+    botLightHealMana = mana
+  }
+
 
   // window values
   var charExperience: Int = 0
