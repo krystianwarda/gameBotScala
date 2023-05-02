@@ -1,6 +1,7 @@
 
 import cavebot.{CaveBot, core}
 import cavebot.core.{followWaypoints, locateLoot, moveToNextWaypoint, recordWaypoints}
+
 import radar.core.findCharLocation
 import userUI.SwingApp
 import utils.image.getLocationFromImageMidMatchTemp
@@ -44,13 +45,25 @@ import cavebot.CaveBot
 //import player.Spells
 //import scala.collection.immutable.Function1
 //import userUI.swingApp
-
+import userUI.ExampleApp
+import player.Example
 object Main {
 
+
   def main(args: Array[String]): Unit = {
+    val examplesList = List(
+      new player.Example("Alice", 1),
+      new player.Example("Bob", 2),
+      new player.Example("Charlie", 3)
+    )
+
+    val exampleApp = ExampleApp(examplesList)
+    exampleApp.visible = true
+
 //    val app = new userUI.swingApp
 
-    loadOpenCVSettings()
+//    loadOpenCVSettings()
+
 //    gameScreen.setWindowName(windowName)
 //    gameScreen.setWindowId(getWindowId(windowName))
 
@@ -62,22 +75,22 @@ object Main {
 //    makeScreenshot(windowName)
 //
 
-    val playersList = detectPlayerWindows(windowName)
-    val app = new SwingApp(playersList)
-    app.main(Array())
-
-    while (true) {
-      for (singlePlayer <- playersList) {
-        maximizeWindow(singlePlayer.windowID)
-        singlePlayer.updateGeneral()
-        println(singlePlayer.characterName)
-        println(singlePlayer.charLevel)
-        println(singlePlayer.botLightHealSpell)
-        println(singlePlayer.botLightHealHealth)
-        println(singlePlayer.botLightHealMana)
-        Thread.sleep(10000)
-      }
-    }
+//    val playersList = detectPlayerWindows(windowName)
+//    val app = new SwingApp(playersList)
+//    app.main(Array())
+//
+//    while (true) {
+//      for (singlePlayer <- playersList) {
+//        maximizeWindow(singlePlayer.windowID)
+//        singlePlayer.updateGeneral()
+//        println(singlePlayer.characterName)
+//        println(singlePlayer.charLevel)
+//        println(singlePlayer.botLightHealSpell)
+//        println(singlePlayer.botLightHealHealth)
+//        println(singlePlayer.botLightHealMana)
+//        Thread.sleep(10000)
+//      }
+//    }
 
 //      println("Start...")
 //      for (singlePlayer <- playersList) {

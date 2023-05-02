@@ -44,7 +44,9 @@ import scala.swing.event.SelectionChanged
 import scala.swing.ListView.Renderer
 import scalafx.Includes._
 //import scalafx.beans.property.{ObjectProperty, Var}
-import monix.execution.Scheduler.Implicits.global
+//import monix.execution.Scheduler.Implicits.global
+
+
 class SwingApp(playerList: Seq[Player]) extends SimpleSwingApplication {
 
   val selectedPlayerVar = ObjectProperty(playerList.head) // declare as a field of the class
@@ -61,30 +63,44 @@ class SwingApp(playerList: Seq[Player]) extends SimpleSwingApplication {
 
     reactions += {
       case SelectionChanged(_) =>
-        updateLabels(selectedPlayerVar(), tabs.selection.page.content)
-        updateAutoHealValues(selectedPlayerVar(), tabs.selection.page.content)
+        updateTabs(selectedPlayerVar(), tabs.selection.page.content)
     }
-
+    //        updateAutoHealValues(selectedPlayerVar(), tabs.selection.page.content)
 
     contents = tabs
     font = new Font("Helvetica", Font.PLAIN, 8)
     size = new Dimension(600, 400)
 
-    def updateAutoHealValues(player: Player, panel: Component): Unit = {
-      panel match {
-        case autoHealPanel: BoxPanel =>
-          // Find the lightSpellField, lightHealField, and lightManaField components in the panel
-          val lightSpellField = autoHealPanel.contents.collectFirst { case tf: TextField if tf.text.startsWith(player.botLightHealSpell) => tf }
-          val lightHealField = autoHealPanel.contents.collectFirst { case tf: TextField if tf.text.startsWith(player.botLightHealHealth.toString) => tf }
-          val lightManaField = autoHealPanel.contents.collectFirst { case tf: TextField if tf.text.startsWith(player.botLightHealMana.toString) => tf }
+    def updateAutoHealValues(player: Player, panel: BoxPanel): Unit = {
+      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
+      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
+      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
 
-          // Update the text of the lightSpellField, lightHealField, and lightManaField components with the selected player's information
-          lightSpellField.foreach(_.text = player.botLightHealSpell)
-          lightHealField.foreach(_.text = player.botLightHealHealth.toString)
-          lightManaField.foreach(_.text = player.botLightHealMana.toString)
+      val spellTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealSpellField.peer => tf }
+      val healthTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealHealthField.peer => tf }
+      val manaTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealManaField.peer => tf }
+      spellTextField.foreach(_.text = player.botLightHealSpell)
+      healthTextField.foreach(_.text = player.botLightHealHealth.toString)
+      manaTextField.foreach(_.text = player.botLightHealMana.toString)
+    }
+
+    def updateTabs(player: Player, component: Component): Unit = {
+      component match {
+        case activatePanel: BoxPanel =>
+          val nameLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
+          val levelLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
+          nameLabel.foreach(_.text = s"Character ${player.characterName}")
+          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
+        case autoHealPanel: BoxPanel =>
+          val nameLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
+          val levelLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
+          nameLabel.foreach(_.text = s"Character ${player.characterName}")
+          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
+          updateAutoHealValues(player, autoHealPanel)
         case _ =>
       }
     }
+
 
     def activatePanel(playerList: Seq[Player]): BoxPanel = new BoxPanel(Orientation.Vertical) {
       // Declare nameLabel and levelLabel as var variables
@@ -101,8 +117,7 @@ class SwingApp(playerList: Seq[Player]) extends SimpleSwingApplication {
       playerComboBox.selection.reactions += {
         case SelectionChanged(_) =>
           selectedPlayerVar() = playerComboBox.selection.item
-          updateLabels(selectedPlayerVar(), this)
-          updateAutoHealValues(selectedPlayerVar(), tabs.selection.page.content)
+          updateTabs(selectedPlayerVar(), this)
       }
 
       // Create a label to display the selected player's name and assign to nameLabel
@@ -111,98 +126,42 @@ class SwingApp(playerList: Seq[Player]) extends SimpleSwingApplication {
       // Create a label to display the selected player's level and assign to levelLabel
       levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
 
-      // Create labels and text fields for the light heal values
-      val lightSpellLabel = new Label("Light Spell: ")
-      val lightSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
-      lightSpellField.columns = 10
-      val lightHealLabel = new Label("Health: ")
-      val lightHealField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
-      lightHealField.columns = 5
-      val lightManaLabel = new Label("Mana: ")
-      val lightManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
-      lightManaField.columns = 5
-
-      val updateButton = new Button("Update")
-      updateButton.reactions += {
-        case ButtonClicked(_) =>
-          // Update the auto-heal values based on the user input
-          selectedPlayerVar().botLightHealSpell = lightSpellField.text
-          selectedPlayerVar().botLightHealHealth = lightHealField.text.toInt
-          selectedPlayerVar().botLightHealMana = lightManaField.text.toInt
-      }
-
       // Add the label, combo box, and button to the panel
       contents += playerComboBox
       contents += nameLabel
       contents += levelLabel
     }
 
-
     def autoHealPanel(playerList: Seq[Player]) = new BoxPanel(Orientation.Vertical) {
-      val autoHealPanelClassLabel = new Label(selectedPlayerVar().autoHealPanelClass)
 
-      // Create a label to display the selected player's name
+      val playerComboBox = new ComboBox(playerList) {
+        renderer = Renderer(_.characterName)
+        selection.item = selectedPlayerVar()
+      }
+
       val nameLabel = new Label(s"Character ${selectedPlayerVar().characterName}")
       val levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
-      val spellLabel = new Label(s"Level ${selectedPlayerVar().botLightHealSpell}")
-      val healthLabel = new Label(s"Level ${selectedPlayerVar().botLightHealHealth}")
-      val manaLabel = new Label(s"Level ${selectedPlayerVar().botLightHealMana}")
+      val manaStatusLabel = new Label(s"Mana status: ${selectedPlayerVar().manaPoints}")
+      val spellLabel = new Label(s"Spell: ")
+      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
+      autoHealSpellField.columns = 10
+      val healthLabel = new Label("Health: ")
+      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
+      autoHealHealthField.columns = 5
+      val manaLabel = new Label("Mana: ")
+      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
+      autoHealManaField.columns = 5
 
-      // Create labels and text fields for the light heal values
-      val lightSpellLabel = new Label("Light Spell: ")
-      val lightSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
-      lightSpellField.columns = 10
-      val lightHealLabel = new Label("Health: ")
-      val lightHealField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
-      lightHealField.columns = 5
-      val lightManaLabel = new Label("Mana: ")
-      val lightManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
-      lightManaField.columns = 5
-
-      val updateButton = new Button("Update")
-      updateButton.reactions += {
-        case ButtonClicked(_) =>
-          // Update the auto-heal values based on the user input
-          selectedPlayerVar().autoHealPanelClass = autoHealPanelClassLabel.text
-          selectedPlayerVar().botLightHealSpell = lightSpellField.text
-          selectedPlayerVar().botLightHealHealth = lightHealField.text.toInt
-          selectedPlayerVar().botLightHealMana = lightManaField.text.toInt
-      }
-
-      // Add the labels and fields to the panel
       contents += nameLabel
       contents += levelLabel
+      contents += manaStatusLabel
       contents += spellLabel
+      contents += autoHealSpellField
       contents += healthLabel
+      contents += autoHealHealthField
       contents += manaLabel
-      //      contents += classLabel
-      contents += new FlowPanel(lightSpellLabel, lightSpellField)
-      contents += new FlowPanel(lightHealLabel, lightHealField)
-      contents += new FlowPanel(lightManaLabel, lightManaField)
-      contents += updateButton
+      contents += autoHealManaField
     }
-
-    def updateLabels(player: Player, component: Component): Unit = {
-      component match {
-        case activatePanel: BoxPanel =>
-          // Find the nameLabel and levelLabel components in the panel
-          val nameLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
-          val levelLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
-          // Find the lightSpellField, lightHealField, and lightManaField components in the panel
-          val lightSpellField = activatePanel.contents.collectFirst { case tf: TextField if tf.text.startsWith(player.botLightHealSpell) => tf }
-          val lightHealField = activatePanel.contents.collectFirst { case tf: TextField if tf.text.startsWith(player.botLightHealHealth.toString) => tf }
-          val lightManaField = activatePanel.contents.collectFirst { case tf: TextField if tf.text.startsWith(player.botLightHealMana.toString) => tf }
-          // Update the text of the nameLabel and levelLabel components with the selected player's information
-          nameLabel.foreach(_.text = s"Character ${player.characterName}")
-          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
-          // Update the text of the lightSpellField, lightHealField, and lightManaField components with the selected player's information
-          lightSpellField.foreach(_.text = player.botLightHealSpell)
-          lightHealField.foreach(_.text = player.botLightHealHealth.toString)
-          lightManaField.foreach(_.text = player.botLightHealMana.toString)
-        case _ =>
-      }
-    }
-
 
   }
 }
