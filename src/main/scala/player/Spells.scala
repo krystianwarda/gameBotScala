@@ -4,30 +4,29 @@ import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 import utils.image.loadImage
 import player.Player
-import utils.keyboard.sendText
+import utils.keyboard.{sendText, sendTextFast}
 import utils.core.randomSleep
+
+import java.awt.Robot
 import java.io.File
 
 object Spells {
 
-  def castSpell(spell: String): Unit = {
-    randomSleep(0.2,0.3,0.5)
-    sendText(spell)
+  def castSpell(robotInstance: Robot, spell: String): Unit = {
+    sendTextFast(robotInstance, spell)
   }
 
-  def castSpellSlow(spell: String): Unit = {
-    randomSleep(1, 0.5, 1)
-    sendText(spell)
+  def castSpellSlow(robotInstance: Robot, spell: String): Unit = {
+    sendTextFast(robotInstance, spell)
   }
 
-  def castSpellFast(spell: String): Unit = {
-    randomSleep(0.2, 0.3, 0.5)
-    sendText(spell)
+  def castSpellFast(robotInstance: Robot, spell: String): Unit = {
+    sendTextFast(robotInstance, spell)
   }
 
-  def castSpellMultiple(spell: String, castTimes: Int): Unit = {
+  def castSpellMultiple(robotInstance: Robot, spell: String, castTimes: Int): Unit = {
     for (i <- 1 to castTimes) {
-      castSpell(spell)
+      castSpell(robotInstance, spell)
       randomSleep(2,1,3)
     }
 

@@ -10,9 +10,10 @@ import javax.imageio.ImageIO
 import scala.collection.mutable.ArrayBuffer
 import java.util.ArrayList
 import org.bytedeco.javacpp.Loader
-import org.opencv.core.{Core, CvType, MatOfPoint2f, Rect, Scalar, Size}
+import org.opencv.core.{Core, CvType, MatOfByte, MatOfPoint2f, Rect, Scalar, Size}
 import org.opencv.core._
 import org.opencv.imgproc.Imgproc
+import player.Player
 
 import java.nio.file.Files
 //import org.bytedeco.javacpp.opencv_core.Mat
@@ -118,13 +119,13 @@ object image {
     Loader.load(classOf[org.bytedeco.opencv.global.opencv_imgproc])
   }
 
-  def mouseOverRectangle(rectangleCoords: Option[(Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)])]): Unit = {
+  def mouseOverRectangle(characterClass: Player, rectangleCoords: Option[(Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)])]): Unit = {
     // call mouseMoveSmooth on each coordinate using foreach
     rectangleCoords.foreach { case (a1, a2, b1, b2) =>
       // call mouseMoveSmooth on each coordinate
       Seq(a1, a2, b1, b2).flatten.foreach { loc =>
         println(Some(loc))
-        mouseMoveSmooth(Some(loc))
+        mouseMoveSmooth(characterClass.getRobot(), Some(loc))
         Thread.sleep(2000) // pause for 2 seconds
       }
     }
@@ -1260,13 +1261,6 @@ object image {
       ImageIO.write(screenshot, "png", window)
     }
   }
-
-  import java.awt.{Rectangle, Toolkit}
-  import java.awt.image.BufferedImage
-  import java.io.File
-  import javax.imageio.ImageIO
-  import org.opencv.core.{CvType, Mat, MatOfByte}
-  import org.opencv.imgcodecs.Imgcodecs
 
   def makeScreenshotMat(windowID: String, characterName: String): Mat = {
     // Create a robot and take a screenshot of the specified window

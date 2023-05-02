@@ -23,7 +23,8 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % "0.14.1",
   "org.scala-lang.modules" %% "scala-swing" % "2.1.1",
   "org.scalafx" %% "scalafx" % "8.0.102-R11",
-  "io.monix" %% "monix" % "3.4.0"
+  "io.monix" %% "monix" % "3.4.0",
+  "com.1stleg" % "jnativehook" % "2.1.0"
 )
 
 //"org.scala-lang" % "scala-library" % "2.11.12"

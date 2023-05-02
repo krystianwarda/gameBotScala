@@ -7,59 +7,56 @@ import java.awt.event.KeyEvent
 
 object mouse {
 
-  val robot = new Robot()
-
-
-  def leftClick(loc: Option[(Int, Int)]): Unit = {
+  def leftClick(robotInstance: Robot, loc: Option[(Int, Int)]): Unit = {
     loc.foreach { case (x, y) =>
-      robot.mouseMove(x, y)
-      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
-      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
+      robotInstance.mouseMove(x, y)
+      robotInstance.mousePress(InputEvent.BUTTON1_DOWN_MASK)
+      robotInstance.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
     }
   }
 
-  def rightClick(loc: Option[(Int, Int)]): Unit = {
+  def rightClick(robotInstance: Robot, loc: Option[(Int, Int)]): Unit = {
     loc.foreach { case (x, y) =>
-      robot.mouseMove(x, y)
-      robot.mousePress(InputEvent.BUTTON3_DOWN_MASK)
-      robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
+      robotInstance.mouseMove(x, y)
+      robotInstance.mousePress(InputEvent.BUTTON3_DOWN_MASK)
+      robotInstance.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
     }
   }
 
-  def shiftClick(loc: Option[(Int, Int)]): Unit = {
+  def shiftClick(robotInstance: Robot, loc: Option[(Int, Int)]): Unit = {
     loc.foreach { case (x, y) =>
-      robot.mouseMove(x, y)
-      robot.keyPress(KeyEvent.VK_SHIFT)
+      robotInstance.mouseMove(x, y)
+      robotInstance.keyPress(KeyEvent.VK_SHIFT)
       Thread.sleep(300)
-      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
-      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
+      robotInstance.mousePress(InputEvent.BUTTON1_DOWN_MASK)
+      robotInstance.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
       Thread.sleep(300)
-      robot.keyRelease(KeyEvent.VK_SHIFT)
+      robotInstance.keyRelease(KeyEvent.VK_SHIFT)
     }
   }
 
-    def mouseMove(loc: Option[(Int, Int)]): Unit = {
+    def mouseMove(robotInstance: Robot, loc: Option[(Int, Int)]): Unit = {
       val (x, y) = loc.get
-      robot.mouseMove(x, y)
+      robotInstance.mouseMove(x, y)
     }
 
-    def dragUseOnChar(loc1: Option[(Int, Int)], loc2: Option[(Int, Int)]): Unit = {
-      mouseMoveSmooth(loc1)
-      robot.mousePress(InputEvent.BUTTON3_DOWN_MASK) // Press right click
-      robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK) // Release right click
+    def dragUseOnChar(robotInstance: Robot, loc1: Option[(Int, Int)], loc2: Option[(Int, Int)]): Unit = {
+      mouseMoveSmooth(robotInstance, loc1)
+      robotInstance.mousePress(InputEvent.BUTTON3_DOWN_MASK) // Press right click
+      robotInstance.mouseRelease(InputEvent.BUTTON3_DOWN_MASK) // Release right click
 
-      mouseMoveSmooth(loc2)
-      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK) // Press left click
-      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK) // Release left click
+      mouseMoveSmooth(robotInstance, loc2)
+      robotInstance.mousePress(InputEvent.BUTTON1_DOWN_MASK) // Press left click
+      robotInstance.mouseRelease(InputEvent.BUTTON1_DOWN_MASK) // Release left click
     }
 
-    def mouseMoveSmooth(loc: Option[(Int, Int)]): Unit = {
+    def mouseMoveSmooth(robotInstance: Robot, loc: Option[(Int, Int)]): Unit = {
       loc.foreach { case (x, y) =>
         val currentLoc = MouseInfo.getPointerInfo.getLocation
         val xStep = (x - currentLoc.getX).toInt / 10
         val yStep = (y - currentLoc.getY).toInt / 10
         for (i <- 1 to 10) {
-          robot.mouseMove(currentLoc.getX.toInt + i * xStep, currentLoc.getY.toInt + i * yStep)
+          robotInstance.mouseMove(currentLoc.getX.toInt + i * xStep, currentLoc.getY.toInt + i * yStep)
           Thread.sleep(50)
         }
       }
@@ -72,9 +69,9 @@ object mouse {
   }
 
 
-  def mouseScroll(scrolls: Int): Unit = {
-    robot.mouseWheel(scrolls)
-    }
+//  def mouseScroll(robotInstance: Robot, scrolls: Int): Unit = {
+//    robot.mouseWheel(scrolls)
+//    }
 
 //    def mouseDragFour(x1: Int, y1: Int, x2: Int, y2: Int): Unit = {
 //        robot.mouseMove(x1, y1)
@@ -84,22 +81,22 @@ object mouse {
 //        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
 //    }
 
-    def mouseDrag(loc1: Option[(Int, Int)], loc2: Option[(Int, Int)]): Unit = {
+    def mouseDrag(robotInstance: Robot, loc1: Option[(Int, Int)], loc2: Option[(Int, Int)]): Unit = {
         if (loc1.isDefined && loc2.isDefined) {
             val (x1, y1) = loc1.get
             val (x2, y2) = loc2.get
-            mouseMoveSmooth(loc1)
-            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
+            mouseMoveSmooth(robotInstance, loc1)
+          robotInstance.mousePress(InputEvent.BUTTON1_DOWN_MASK)
             Thread.sleep(600)
-            mouseMoveSmooth(loc2)
+            mouseMoveSmooth(robotInstance, loc2)
 //            robot.mouseMove(x2, y2)
-            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
+          robotInstance.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
         } else {
             println("Cannot drag mouse. One or both locations not found.")
         }
     }
 
-  def mouseDragSmooth(loc1: Option[(Int, Int)], loc2: Option[(Int, Int)]): Unit = {
+  def mouseDragSmooth(robotInstance: Robot, loc1: Option[(Int, Int)], loc2: Option[(Int, Int)]): Unit = {
     if (loc1.isDefined && loc2.isDefined) {
       val (x1, y1) = loc1.get
       val (x2, y2) = loc2.get
@@ -119,20 +116,20 @@ object mouse {
       val stepSizeY = deltaY / steps
 
       // Perform the drag in steps
-      robot.mouseMove(x1, y1)
-      robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
+      robotInstance.mouseMove(x1, y1)
+      robotInstance.mousePress(InputEvent.BUTTON1_DOWN_MASK)
       Thread.sleep(600)
       for (i <- 1 to steps) {
         val x = (x1 + stepSizeX * i).toInt
         val y = (y1 + stepSizeY * i).toInt
-        robot.mouseMove(x, y)
+        robotInstance.mouseMove(x, y)
         Thread.sleep(10)
       }
-      robot.mouseMove(x2, y2)
-      robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
+      robotInstance.mouseMove(x2, y2)
+      robotInstance.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
 
       // Move the mouse back to its original position
-      robot.mouseMove(currentMousePos.x.toInt, currentMousePos.y.toInt)
+      robotInstance.mouseMove(currentMousePos.x.toInt, currentMousePos.y.toInt)
     } else {
       println("Cannot drag mouse. One or both locations not found.")
     }

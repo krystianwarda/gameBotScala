@@ -2,6 +2,10 @@ package utils
 
 import io.circe.generic.auto.exportEncoder
 
+import java.awt.event.{InputEvent, KeyEvent, MouseEvent}
+import org.jnativehook.keyboard.NativeKeyEvent
+import org.jnativehook.keyboard.NativeKeyListener
+
 import java.awt.{Desktop, Robot, Toolkit}
 import java.awt.event.KeyEvent
 import scala.concurrent.duration._
@@ -27,17 +31,34 @@ import utils.gameScreen._
 import utils.gameScreen
 
 import java.awt.Robot
-import java.awt.event.InputEvent
 import player.Player
 import radar.core.{cutRadarImage, getRadarCenterLoc}
 //import radar.core.locatePosition
 import utils.image.{getCenterLoc, loadImage, makeScreenshot, makeScreenshotID}
+import javax.swing.SwingWorker
 
 import java.nio.charset.StandardCharsets
 import io.circe._
 import io.circe.generic.semiauto._
 
 object core {
+
+    def runBot(playersList: List[player.Player], runningBot: Boolean): Unit = {
+
+        while (runningBot) {
+            for (singlePlayer <- playersList) {
+                if (singlePlayer.threadActivation) {
+                    singlePlayer.saveClass()
+                    singlePlayer.startInputHandling()
+                    singlePlayer.setThreaad(false)
+                }
+                maximizeWindow(singlePlayer.windowID)
+                singlePlayer.updateGeneral()
+                println(singlePlayer.getHealthPoints())
+                println(singlePlayer.getManaPoints())
+            }
+        }
+    }
 
     def detectPlayerWindows(windowNameSubstring: String): List[Player] = {
         // Search for windows that match the window name substring
@@ -48,7 +69,8 @@ object core {
         // Extract character names and create PlayerWindow objects
         windowIDs.map { windowID =>
             maximizeWindow(windowID)
-            Thread.sleep(500)
+            Thread.sleep(100)
+            val robot = new Robot()
             val windowTitle = Seq("xdotool", "getwindowname", windowID).!!.trim
             val characterName = windowTitle.split(" - ")(1).replaceAll("\\s", "_")
             var screenshotPath = makeScreenshotID(windowID, characterName)
@@ -56,7 +78,7 @@ object core {
             var centerLoc = getCenterLoc(characterWindow)
             var radarImage = cutRadarImage(characterWindow)
             var radarCenterLoc = getRadarCenterLoc(characterWindow)
-            new Player(windowID, characterName,characterWindow, centerLoc, radarImage, radarCenterLoc)
+            new Player(windowID, characterName,characterWindow, centerLoc, radarImage, radarCenterLoc, robot)
         }
     }
     def detectWindows(windowName: String): List[String] = {
@@ -175,6 +197,16 @@ object core {
 //    }
 
 
+    def savePlayerClasses(players: List[player.Player]): Unit = {
+        val path = "classes/playerClasses/"
+        players.foreach { player =>
+            val filename = s"${path}${player.characterName}.ser"
+            val outputStream = new ObjectOutputStream(new FileOutputStream(filename))
+            outputStream.writeObject(player)
+            outputStream.close()
+        }
+    }
+
 
     def testMove(windowName: String): Unit = {
         val windowSubstring = windowName
@@ -222,6 +254,15 @@ object core {
 //        outputStream.write(json)
 //        outputStream.close()
 //    }
+}
+
+class InputHandler(robotBotThread: Robot) extends Thread {
+    override def run(): Unit = {
+        while (true) {
+            // Wait for a short time before repeating the loop
+            Thread.sleep(100)
+        }
+    }
 }
 
 

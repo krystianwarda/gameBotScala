@@ -12,8 +12,10 @@ import scala.collection.mutable.ArrayBuffer
 import java.awt.{Font, GraphicsEnvironment, GridBagLayout}
 import javax.swing.{DefaultDesktopManager, UIManager}
 import userUI.UserSettings
+import utils.core.runBot
 
 import scala.swing.GridBagPanel.Anchor
+//import scala.swing.event.Key.Escape
 //import monix.reactive.{Observable, Observer}
 //import monix.execution.Scheduler.Implicits.global
 //import monix.execution.rstreams.Subscription
@@ -54,10 +56,21 @@ import javax.swing.{JLabel, JPanel, JTextField}
 import javax.swing.{JButton, JLabel, JPanel, JTextField}
 import scala.swing.GridBagPanel.Anchor
 //scala.swing.GridBagPanel.Fill
+import scala.concurrent.{Future, ExecutionContext}
+import ExecutionContext.Implicits.global
+import java.awt.event.KeyEvent.{VK_ESCAPE, getKeyText}
+import scala.swing.Reactions.Reaction
+import scala.swing.event.{ButtonClicked, KeyPressed}
+import scala.swing.event.Key
+import Key.Escape
 
 case class SwingApp(examples: List[player.Player]) extends MainFrame {
   title = "TibiaYBB - Younger Brother Bot"
   preferredSize = new Dimension(600, 300)
+  var runningBot = false
+
+
+
 
   def updateExample(): Unit = {
     val selectedName = exampleDropdown.selection.item
@@ -71,15 +84,11 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
     strongHealManaField.text = selectedExample.botStrongHealMana.toString
     ihHealHealthField.text = selectedExample.botIhHealHealth.toString
     ihHealManaField.text = selectedExample.botIhHealMana.toString
-
     uhHealHealthField.text = selectedExample.botUhHealHealth.toString
     uhHealManaField.text = selectedExample.botUhHealMana.toString
-
     hPotionHealHealthField.text = selectedExample.botHPotionHealHealth.toString
     hPotionHealManaField.text = selectedExample.botHPotionHealMana.toString
-
     mPotionHealManaMinField.text = selectedExample.botMPotionHealManaMin.toString
-    mPotionHealManaMaxField.text = selectedExample.botMPotionHealManaMax.toString
   }
 
   def saveExample(): Unit = {
@@ -93,15 +102,11 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
     val strongHealManaVar = strongHealManaField.text.toInt
     val ihHealHealthVar = ihHealManaField.text.toInt
     val ihHealManaVar = ihHealManaField.text.toInt
-
     val uhHealHealthVar = uhHealManaField.text.toInt
     val uhHealManaVar = uhHealManaField.text.toInt
-
     val hPotionHealHealthVar = hPotionHealHealthField.text.toInt
     val hPotionHealManaVar = hPotionHealManaField.text.toInt
-
     val mPotionHealManaMinVar = mPotionHealManaMinField.text.toInt
-    val mPotionHealManaMaxVar = mPotionHealManaMaxField.text.toInt
 
 
     selectedExample.updateAutoHeal(lightHealSpellVar, lightHealHealthVar, lightHealManaVar,
@@ -109,7 +114,7 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
       ihHealHealthVar, ihHealManaVar,
       uhHealHealthVar, uhHealManaVar,
       hPotionHealHealthVar, hPotionHealManaVar,
-      mPotionHealManaMinVar, mPotionHealManaMaxVar)
+      mPotionHealManaMinVar)
   }
 
   val exampleNames = examples.map(_.characterName)
@@ -126,13 +131,11 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
   val strongHealManaField = new TextField()
   val ihHealHealthField = new TextField()
   val ihHealManaField = new TextField()
-
   val uhHealHealthField = new TextField()
   val uhHealManaField = new TextField()
   val hPotionHealHealthField = new TextField()
   val hPotionHealManaField = new TextField()
   val mPotionHealManaMinField = new TextField()
-  val mPotionHealManaMaxField = new TextField()
 
 
   val updateButton = new Button("Update") {
@@ -144,10 +147,38 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
   }
 
   contents = new TabbedPane {
+
+    import scala.swing.event.Key
+    import Key.Escape
+
     pages += new TabbedPane.Page("Main", new BoxPanel(Orientation.Vertical) {
       contents += exampleDropdown
 
-      listenTo(exampleDropdown.selection)
+      val stopBotButton = Button("Stop Bot") {
+        runningBot = false
+      }
+      val runBotButton = Button("Run Bot") {
+        runningBot = true
+        Future {
+          runBot(examples, runningBot)
+        }
+      }
+
+      contents += runBotButton
+      contents += stopBotButton
+
+      listenTo(exampleDropdown.selection, this)
+
+      val escapePressed: Reaction = {
+        case KeyPressed(_, Escape, _, _) => stopBotButton.doClick()
+      }
+      val buttonPressed: Reaction = {
+        case ButtonClicked(`stopBotButton`) => runningBot = false
+        case ButtonClicked(`runBotButton`) => runningBot = true
+      }
+
+      reactions += buttonPressed
+      reactions += escapePressed
       reactions += {
         case SelectionChanged(_) => updateExample()
       }
@@ -164,18 +195,14 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
       val ihHealLabel = new JLabel("IH rune")
       val ihHealHealthLabel = new JLabel("Health")
       val ihHealManaLabel = new JLabel("Mana")
-
       val uhHealLabel = new JLabel("UH rune")
       val uhHealHealthLabel = new JLabel("Health")
       val uhHealManaLabel = new JLabel("Mana")
-
       val hPotionHealLabel = new JLabel("H potion")
       val hPotionHealHealthLabel = new JLabel("Health")
       val hPotionHealManaLabel = new JLabel("Mana")
-
       val mPotionHealLabel = new JLabel("M potion")
-      val mPotionHealManaMinLabel = new JLabel("MMin")
-      val mPotionHealManaMaxLabel = new JLabel("MMax")
+      val mPotionHealManaMinLabel = new JLabel("Mana")
 
 
       val c = new GridBagConstraints()
@@ -339,28 +366,16 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
       c.gridy = 5
       add(mPotionHealLabel, c)
 
-      c.gridx = 3
+      c.gridx = 5
       c.gridwidth = 1
       c.fill = GridBagConstraints.NONE
       add(mPotionHealManaMinLabel, c)
 
-      c.gridx = 4
+      c.gridx = 6
       c.gridwidth = 1
       c.fill = GridBagConstraints.HORIZONTAL
       mPotionHealManaMinField.peer.setPreferredSize(new Dimension(healthManaFieldWidth, mPotionHealManaMinField.peer.getPreferredSize.height))
       add(mPotionHealManaMinField.peer, c)
-
-      c.gridx = 5
-      c.gridwidth = 1
-      c.fill = GridBagConstraints.HORIZONTAL
-      mPotionHealManaMaxLabel.setPreferredSize(new Dimension(healthManaFieldWidth, mPotionHealManaMaxLabel.getPreferredSize.height))
-      add(mPotionHealManaMaxLabel, c)
-
-      c.gridx = 6
-      c.gridwidth = 1
-      c.fill = GridBagConstraints.HORIZONTAL
-      mPotionHealManaMaxField.peer.setPreferredSize(new Dimension(healthManaFieldWidth, mPotionHealManaMaxField.peer.getPreferredSize.height))
-      add(mPotionHealManaMaxField.peer, c)
 
 
       // Button row
@@ -370,450 +385,11 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
       add(updateButton.peer, c)
 
     }))
+
+    pages += new TabbedPane.Page("Rune Maker", Component.wrap(new JPanel(new GridBagLayout) {}))
+    pages += new TabbedPane.Page("Aim Bot", Component.wrap(new JPanel(new GridBagLayout) {}))
+    pages += new TabbedPane.Page("Cave Bot", Component.wrap(new JPanel(new GridBagLayout) {}))
+
   }
   updateExample()
 }
-
-
-
-
-
-//
-//case class SwingApp(examples: List[player.Player]) extends MainFrame {
-//  title = "TibiaYBB - Younger Brother Bot"
-//  preferredSize = new Dimension(600, 300)
-//
-//  def updateExample(): Unit = {
-//    val selectedName = exampleDropdown.selection.item
-//    val selectedExample = exampleMap(selectedName)
-//    exampleLabel.text = s"Name: ${selectedExample.characterName}, Level: ${selectedExample.charLevel}"
-//    lightHealSpellField.text = selectedExample.botLightHealSpell.toString
-//    lightHealHealthField.text = selectedExample.botLightHealHealth.toString
-//    lightHealManaField.text = selectedExample.botLightHealMana.toString
-//    strongHealSpellField.text = selectedExample.botStrongHealSpell.toString
-//    strongHealHealthField.text = selectedExample.botStrongHealHealth.toString
-//    strongHealManaField.text = selectedExample.botStrongHealMana.toString
-//  }
-//
-//
-//  def saveExample(): Unit = {
-//    val selectedName = exampleDropdown.selection.item
-//    val selectedExample = exampleMap(selectedName)
-//    selectedExample.botLightHealSpell = lightHealSpellField.text
-//    selectedExample.botLightHealHealth = lightHealHealthField.text.toInt
-//    selectedExample.botLightHealMana = lightHealManaField.text.toInt
-//    selectedExample.botStrongHealSpell = strongHealSpellField.text
-//    selectedExample.botStrongHealHealth = strongHealHealthField.text.toInt
-//    selectedExample.botStrongHealMana = strongHealManaField.text.toInt
-//  }
-//
-//
-//  val exampleNames = examples.map(_.characterName)
-//  val exampleMap = examples.map(e => e.characterName -> e).toMap
-//
-//  val exampleDropdown = new ComboBox(exampleNames)
-//
-//  val exampleLabel = new Label()
-//  val lightHealSpellField = new TextField()
-//  val lightHealHealthField = new TextField()
-//  val lightHealManaField = new TextField()
-//  val strongHealSpellField = new TextField()
-//  val strongHealHealthField = new TextField()
-//  val strongHealManaField = new TextField()
-//
-//  val updateButton = new Button("Update") {
-//    reactions += {
-//      case ButtonClicked(_) =>
-//        saveExample()
-//        updateExample()
-//    }
-//  }
-//
-//  contents = new TabbedPane {
-//    pages += new TabbedPane.Page("Examples", new BoxPanel(Orientation.Vertical) {
-//      contents += exampleDropdown
-//
-//      listenTo(exampleDropdown.selection)
-//      reactions += {
-//        case SelectionChanged(_) =>
-//          updateExample()
-//          lightHealSpellField.text = exampleMap(exampleDropdown.selection.item).botLightHealSpell.toString
-//          lightHealHealthField.text = exampleMap(exampleDropdown.selection.item).botLightHealHealth.toString
-//          lightHealManaField.text = exampleMap(exampleDropdown.selection.item).botLightHealMana.toString
-//          strongHealSpellField.text = exampleMap(exampleDropdown.selection.item).botStrongHealSpell.toString
-//          strongHealHealthField.text = exampleMap(exampleDropdown.selection.item).botLightHealHealth.toString
-//          strongHealManaField.text = exampleMap(exampleDropdown.selection.item).botLightHealMana.toString
-//      }
-//
-//    })
-//
-//
-//    pages += new TabbedPane.Page("Details", Component.wrap(new JPanel(new GridBagLayout) {
-//      val lightHealLabel = new JLabel("LoSpell:")
-//      val strongHealLabel = new JLabel("HiSpell:")
-//      val lightHealHealthLabel = new JLabel("Health:")
-//      val lightHealManaLabel = new JLabel("Mana:")
-//      val strongHealHealthLabel = new JLabel("Health:")
-//      val strongHealManaLabel = new JLabel("Mana:")
-//
-//      val lightHealSpellField = new JTextField(10)
-//      val lightHealHealthField = new JTextField(5)
-//      val lightHealManaField = new JTextField(5)
-//      val strongHealSpellField = new JTextField(10)
-//      val strongHealHealthField = new JTextField(5)
-//      val strongHealManaField = new JTextField(5)
-//
-//      val c = new GridBagConstraints()
-//      c.insets = new Insets(5, 5, 5, 5)
-//
-//
-//      // First row
-//      c.gridx = 0
-//      c.gridy = 0
-//      add(lightHealLabel, c)
-//
-//      c.gridx = 1
-//      c.gridwidth = 2
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(lightHealSpellField, c)
-//
-//      c.gridx = 3
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.NONE
-//      add(lightHealHealthLabel, c)
-//
-//      c.gridx = 4
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(lightHealHealthField, c)
-//
-//      c.gridx = 5
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(lightHealManaLabel, c)
-//
-//      c.gridx = 6
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(lightHealManaField, c)
-//
-//      // Second row
-//      c.gridx = 0
-//      c.gridy = 1
-//      add(strongHealLabel, c)
-//
-//      c.gridx = 1
-//      c.gridwidth = 2
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(strongHealSpellField, c)
-//
-//      c.gridx = 3
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.NONE
-//      add(strongHealHealthLabel, c)
-//
-//      c.gridx = 4
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(strongHealHealthField, c)
-//
-//      c.gridx = 5
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(strongHealManaLabel, c)
-//
-//      c.gridx = 6
-//      c.gridwidth = 1
-//      c.fill = GridBagConstraints.HORIZONTAL
-//      add(strongHealManaField, c)
-//
-//      // Button row
-//      c.gridy = 2
-//      c.gridx = 3
-//      c.gridwidth = 2
-//      val updateButton = new JButton("Update")
-//      add(updateButton, c)
-//
-//    }))
-//  }
-//
-//  updateExample()
-//}
-
-
-//
-//class SwingApp(playerList: Seq[Player]) extends SimpleSwingApplication {
-//
-//
-//
-//
-//  val selectedPlayerVar = ObjectProperty(playerList.head) // declare as a field of the class
-//
-//  def top = new MainFrame {
-//    title = "TibiaYBB - Younger Brother Bot"
-//
-//    val tabs = new TabbedPane {
-//      pages += new TabbedPane.Page("Activate", activatePanel(playerList))
-//      pages += new TabbedPane.Page("Auto Heal", autoHealPanel(playerList))
-//    }
-//
-//    listenTo(tabs.selection)
-//
-//    reactions += {
-//      case SelectionChanged(_) =>
-//        updateTabs(selectedPlayerVar(), tabs.selection.page.content)
-//    }
-//    //        updateAutoHealValues(selectedPlayerVar(), tabs.selection.page.content)
-//
-//    contents = tabs
-//    font = new Font("Helvetica", Font.PLAIN, 8)
-//    size = new Dimension(600, 400)
-//
-//    def updateAutoHealValues(player: Player, panel: BoxPanel): Unit = {
-//      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
-//      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
-//      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
-//
-//      val spellTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealSpellField.peer => tf }
-//      val healthTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealHealthField.peer => tf }
-//      val manaTextField = panel.contents.collectFirst { case tf: TextField if tf.peer eq autoHealManaField.peer => tf }
-//      spellTextField.foreach(_.text = player.botLightHealSpell)
-//      healthTextField.foreach(_.text = player.botLightHealHealth.toString)
-//      manaTextField.foreach(_.text = player.botLightHealMana.toString)
-//    }
-//
-//    def updateTabs(player: Player, component: Component): Unit = {
-//      component match {
-//        case activatePanel: BoxPanel =>
-//          val nameLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
-//          val levelLabel = activatePanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
-//          nameLabel.foreach(_.text = s"Character ${player.characterName}")
-//          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
-//        case autoHealPanel: BoxPanel =>
-//          val nameLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Character") => lbl }
-//          val levelLabel = autoHealPanel.contents.collectFirst { case lbl: Label if lbl.text.startsWith("Level") => lbl }
-//          nameLabel.foreach(_.text = s"Character ${player.characterName}")
-//          levelLabel.foreach(_.text = s"Level ${player.charLevel}")
-//          updateAutoHealValues(player, autoHealPanel)
-//        case _ =>
-//      }
-//    }
-//
-//
-//    def activatePanel(playerList: Seq[Player]): BoxPanel = new BoxPanel(Orientation.Vertical) {
-//      // Declare nameLabel and levelLabel as var variables
-//      var nameLabel: Label = _
-//      var levelLabel: Label = _
-//
-//      // Create a combo box to select the active player
-//      val playerComboBox = new ComboBox(playerList) {
-//        renderer = Renderer(_.characterName)
-//        selection.item = selectedPlayerVar()
-//      }
-//
-//      // Add a listener to the combo box that updates the selected player variable and the auto-heal values in the text fields
-//      playerComboBox.selection.reactions += {
-//        case SelectionChanged(_) =>
-//          selectedPlayerVar() = playerComboBox.selection.item
-//          updateTabs(selectedPlayerVar(), this)
-//      }
-//
-//      // Create a label to display the selected player's name and assign to nameLabel
-//      nameLabel = new Label(s"Character ${selectedPlayerVar().characterName}")
-//
-//      // Create a label to display the selected player's level and assign to levelLabel
-//      levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
-//
-//      // Add the label, combo box, and button to the panel
-//      contents += playerComboBox
-//      contents += nameLabel
-//      contents += levelLabel
-//    }
-//
-//    def autoHealPanel(playerList: Seq[Player]) = new BoxPanel(Orientation.Vertical) {
-//
-//      val playerComboBox = new ComboBox(playerList) {
-//        renderer = Renderer(_.characterName)
-//        selection.item = selectedPlayerVar()
-//      }
-//
-//      val nameLabel = new Label(s"Character ${selectedPlayerVar().characterName}")
-//      val levelLabel = new Label(s"Level ${selectedPlayerVar().charLevel}")
-//      val manaStatusLabel = new Label(s"Mana status: ${selectedPlayerVar().manaPoints}")
-//      val spellLabel = new Label(s"Spell: ")
-//      val autoHealSpellField = new TextField(selectedPlayerVar().botLightHealSpell)
-//      autoHealSpellField.columns = 10
-//      val healthLabel = new Label("Health: ")
-//      val autoHealHealthField = new TextField(selectedPlayerVar().botLightHealHealth.toString)
-//      autoHealHealthField.columns = 5
-//      val manaLabel = new Label("Mana: ")
-//      val autoHealManaField = new TextField(selectedPlayerVar().botLightHealMana.toString)
-//      autoHealManaField.columns = 5
-//
-//      contents += nameLabel
-//      contents += levelLabel
-//      contents += manaStatusLabel
-//      contents += spellLabel
-//      contents += autoHealSpellField
-//      contents += healthLabel
-//      contents += autoHealHealthField
-//      contents += manaLabel
-//      contents += autoHealManaField
-//    }
-//
-//  }
-//}
-
-
-
-//class InputClass(inputs: Array[Array[String]])
-
-
-//    pages += new TabbedPane.Page("Auto Healing", autoHealing) {
-//      peer.setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 10, 10, 10))
-//    }
-//
-////    pages += new TabbedPane.Page("Cavebot", caveBot)
-//    def autoHealing = new BoxPanel(Orientation.Vertical) {
-//      val rows = ArrayBuffer[ArrayBuffer[Component]]()
-//
-//      val row1 = rowAutoHealing("Strong spell", "", "Health: ", "", "Mana: ", "")
-//      val row2 = rowAutoHealing("Light spell:", "", "Health: ", "", "Mana: ", "")
-//      val row3 = rowAutoHealing("UH Rune:", "", "Health: ", "", "Mana: ", "")
-//      val row4 = rowAutoHealing("IH Rune:", "", "Health: ", "", "Mana: ", "")
-//      val row5 = rowAutoHealing("HP Potion:", "", "Health: ", "", "Mana: ", "")
-//      val row6 = rowAutoHealing("MP Potion:", "", "Health: ", "", "Mana: ", "")
-//
-//      contents += row1
-//      contents += row2
-//      contents += row3
-//      contents += row4
-//      contents += row5
-//      contents += row6
-//
-//      val storeInputButton = new Button("Store Input") {
-//        reactions += {
-//          case event.ButtonClicked(_) => storeInput()
-//        }
-//      }
-//
-//      contents += Swing.VStrut(10)
-//      contents += storeInputButton
-//
-//      def storeInput(): Unit = {
-//        val inputArray = rows.map(row => row.map {
-//          case tf: TextField => tf.text
-//          case c: Component => c.toString
-//        }.toArray).toArray
-//        val inputClass = new InputClass(inputArray)
-//        // Do something with the inputClass object
-//      }
-//    }
-
-
-//def caveBot = new BoxPanel(Orientation.Vertical) {
-//  val rows = ArrayBuffer[ArrayBuffer[TextField]]()
-//  for (i <- 1 to 10) {
-//    val row = ArrayBuffer[TextField]()
-//    val col1 = new TextField()
-//    val col2 = new TextField()
-//    val col3 = new TextField()
-//    val col4 = new TextField()
-//    val col5 = new TextField()
-//    val col6 = new TextField()
-//
-//    row += col1
-//    row += col2
-//    row += col3
-//    row += col4
-//    row += col5
-//    row += col6
-//
-//    contents += new BoxPanel(Orientation.Horizontal) {
-//      contents ++= row
-//    }
-//    rows += row
-//  }
-//
-//  val storeInputButton = new Button("Store Input") {
-//    reactions += {
-//      case event.ButtonClicked(_) => storeInput()
-//    }
-//  }
-//
-//  contents += storeInputButton
-//
-//  def storeInput(): Unit = {
-//    val inputArray = rows.map(row => row.map(_.text).toArray).toArray
-//    val inputClass = new InputClass(inputArray)
-//    // Do something with the inputClass object
-//  }
-//}
-//
-//def rowAutoHealing(col1Label: String, col2Label: String, col3Label: String, col4Label: String, col5Label: String, col6Label: String): BoxPanel = {
-//  val row = ArrayBuffer[Component]()
-//  val col1 = new Label(col1Label) {
-//    preferredSize = new Dimension(100, 10)
-//  }
-//  val col2 = new TextField() {
-//    preferredSize = new Dimension(100, 10)
-//  }
-//  val col3 = new Label(col3Label) {
-//    preferredSize = new Dimension(50, 10)
-//  }
-//  val col4 = new TextField() {
-//    preferredSize = new Dimension(50, 10)
-//  }
-//  val col5 = new Label(col5Label) {
-//    preferredSize = new Dimension(50, 10)
-//  }
-//  val col6 = new TextField() {
-//    preferredSize = new Dimension(50, 10)
-//  }
-//
-//  row += col1
-//  row += col2
-//  row += col3
-//  row += col4
-//  row += col5
-//  row += col6
-//
-//  new BoxPanel(Orientation.Horizontal) {
-//    contents ++= row
-//    border = Swing.EmptyBorder(3, 3, 3, 3)
-//  }
-//}
-//
-
-
-
-//pages += new Page("Initial tab", new BoxPanel(Orientation.Vertical) {
-//  contents += new Label("This is Tab 1")
-//  contents += new Button("Click me!")
-//  contents += new ComboBox(List("Option 1", "Option 2", "Option 3"))
-//  contents += new CheckBox("Check me!")
-//})
-//pages += new Page("radio buttons", new BoxPanel(Orientation.Vertical) {
-//  contents += new Label("This is Tab 2")
-//  contents += new RadioButton("Option 1")
-//  contents += new RadioButton("Option 2")
-//  contents += new RadioButton("Option 3")
-//})
-//pages += new Page("Healing", new BoxPanel(Orientation.Vertical) {
-//  contents += new Label("This is Tab 2")
-//  contents += new RadioButton("Option 1")
-//  contents += new RadioButton("Option 2")
-//  contents += new RadioButton("Option 3")
-//})
-//pages += new Page("Cavebot", new BoxPanel(Orientation.Vertical) {
-//  contents += new Label("This is Tab 3")
-//  contents += new TextField(20)
-//  contents += new PasswordField(20)
-//  contents += new TextArea(5, 20)
-//})
-//pages += new Page("Aimbot", new BoxPanel(Orientation.Vertical) {
-//  contents += new Label("This is Tab 4")
-//  contents += new Slider()
-//  contents += new ProgressBar()
-//  contents += new ScrollPane(new Label("Scrollable content"))
-//})

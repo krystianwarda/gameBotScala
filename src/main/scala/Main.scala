@@ -1,9 +1,12 @@
-
+//package src.main.scala
 import cavebot.{CaveBot, core}
 import cavebot.core.{followWaypoints, locateLoot, moveToNextWaypoint, recordWaypoints}
-
+import credentials.windowName
 import radar.core.findCharLocation
 import userUI.SwingApp
+
+import java.io.FileNotFoundException
+//import utils.gameScreen.windowName
 import utils.image.getLocationFromImageMidMatchTemp
 import utils.mouse.{leftClick, rightClick}
 
@@ -33,7 +36,7 @@ import utils.image.{loadImage, loadImage3, loadOpenCVSettings, makeScreenshot, m
 import player.Player
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import credentials._
+//import scala.credentials._
 //import radar.core.locatePosition
 import utils.mouse.mouseMoveSmooth
 //import player.Player.{eatFood, foodStatus}
@@ -52,23 +55,21 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     loadOpenCVSettings()
-
     val playersList = detectPlayerWindows(windowName)
+
+    for (singlePlayer <- playersList) {
+      try {
+        singlePlayer.loadClass()
+      } catch {
+        case _: FileNotFoundException =>
+          println("File not found for player: " + singlePlayer.characterName)
+      }
+    }
+
     val app = new SwingApp(playersList)
     app.visible = true
 
-    while (true) {
-      for (singlePlayer <- playersList) {
-        maximizeWindow(singlePlayer.windowID)
-        singlePlayer.updateGeneral()
-        println(singlePlayer.characterName)
-        println(singlePlayer.charLevel)
-        println(singlePlayer.botLightHealSpell)
-        println(singlePlayer.botLightHealHealth)
-        println(singlePlayer.botLightHealMana)
-        Thread.sleep(10000)
-      }
-    }
+
 
     //example App
 //    val examplesList = List(

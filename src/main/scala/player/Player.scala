@@ -2,26 +2,47 @@ package player
 //import org.opencv.core.Mats
 import com.sun.jna.Union
 import org.opencv.core.Mat
-import player.Runes.runeOnChar
+import player.RunesPotions.runePotionOnChar
 import player.skillsWindow.{createRectangle, numberDetection}
-import radar.core.{cutRadarImage}
+import radar.core.cutRadarImage
+import utils.InputHandler
 import utils.core.randomDirection
 import utils.image.{extractRectangle, getLocationFromImageMidLeft, loadImage, makeScreenshotMat, mouseOverRectangle, saveMatAsPng}
-import utils.keyboard.pressCtrlDirection
+import utils.keyboard.{pressCtrlDirection, pressFKey}
+
+import java.awt.Robot
+import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
+import scala.concurrent.Future
 //import player.Player2.{capacityValue, charExperience, charLevel, healthPoints, lastMealTimestamp, magicLevel, manaPoints, soulPoints}
 import utils.core.{getCurrentTimestamp, randomNumber}
 import utils.image.foodDetection
 import utils.mouse.{mouseMoveSmooth, rightClick}
 import player.Spells
+import java.time.{Instant, Duration}
 
 class Player(val windowID: String,
              val characterName: String,
              var charWindow: Mat,
              var centerLoc: Option[(Int, Int)],
              var radarImage: Mat,
-             var radarCenterLoc: Option[(Int, Int)]) {
+             var radarCenterLoc: Option[(Int, Int)],
+             var robotInstance: Robot) {
+
+  // character values
+  var charExperience: Int = 0
+  var charLevel: Int = 0
+  var healthPoints: Int = 0
+  var manaPoints: Int = 0
+  var soulPoints: Int = 0
+  var capacityValue = 0
+  var magicLevel: Int = 0
+  var lastMealTimestamp: Long = System.currentTimeMillis / 1000
+  var lastSpellTimestamp: Long = System.currentTimeMillis
+  var lastCharacterRotation: Long = System.currentTimeMillis() / 1000
 
   // bot settings values
+  var threadActivation: Boolean = true
+  private var inputHandler: Option[InputHandler] = None
   var autoHealPanelClass: String = ""
   var botLightHealSpell: String = ""
   var botLightHealHealth: Int = 0
@@ -36,14 +57,13 @@ class Player(val windowID: String,
   var botHPotionHealHealth: Int = 0
   var botHPotionHealMana: Int = 0
   var botMPotionHealManaMin: Int = 0
-  var botMPotionHealManaMax: Int = 0
 
   def updateAutoHeal(lightSpell: String, lightHealth: Int, lightMana: Int,
                      strongSpell: String, strongHealth: Int, strongMana: Int,
                      ihHealth: Int, ihMana: Int,
                      uhHealth: Int, uhMana: Int,
                      hPotionHealth: Int, hPotionMana: Int,
-                     mPotionManaMin: Int, mPotionManaMax: Int): Unit = {
+                     mPotionManaMin: Int): Unit = {
     botLightHealSpell = lightSpell
     botLightHealHealth = lightHealth
     botLightHealMana = lightMana
@@ -57,19 +77,9 @@ class Player(val windowID: String,
     botHPotionHealHealth = hPotionHealth
     botHPotionHealMana = hPotionMana
     botMPotionHealManaMin = mPotionManaMin
-    botMPotionHealManaMax = mPotionManaMax
   }
 
   // window values
-  var charExperience: Int = 0
-  var charLevel: Int = 0
-  var healthPoints: Int = 0
-  var manaPoints: Int = 0
-  var soulPoints: Int = 0
-  var capacityValue = 0
-  var magicLevel: Int = 0
-  var lastMealTimestamp: Long = System.currentTimeMillis / 1000
-  var lastCharacterRotation: Long = System.currentTimeMillis() / 1000
   var helmetLocation: Option[(Int, Int)] = None
   var armorLocation: Option[(Int, Int)] = None
 
@@ -77,7 +87,9 @@ class Player(val windowID: String,
     return charLevel
   }
 
-
+  def setThreaad(value: Boolean): Unit = {
+    threadActivation = value
+  }
   def setBotLightHealSpell (text: String): Unit = {
     botLightHealSpell = text
   }
@@ -97,10 +109,9 @@ class Player(val windowID: String,
     return botLightHealMana
   }
 
-
-
-
-
+  def getRobot(): Robot = {
+    return this.robotInstance
+  }
   def setExperienceValue(value: Int): Unit = {
     charExperience = value
   }
@@ -131,6 +142,10 @@ class Player(val windowID: String,
 
   def setLastMealTimestamp(value: Long): Unit = {
     lastMealTimestamp = value
+  }
+
+  def setLastSpellTimestamp(value: Long): Unit = {
+    lastSpellTimestamp = value
   }
   def setCenterLoc(loc: Option[(Int, Int)]): Unit = {
     centerLoc = loc
@@ -179,40 +194,99 @@ class Player(val windowID: String,
   def getRadarImage(): Mat = {
     return radarImage
   }
-
-
-
   def getRadarCenterLoc(): Option[(Int, Int)] = {
     return radarCenterLoc
   }
 
-  def autoheal(exura: Option[Int] = None,
-               exura_gran: Option[Int] = None,
-               exura_vita: Option[Int] = None,
-               exura_sio: Option[Int] = None,
-               IH: Option[Int] = None,
-               UH: Option[Int] = None): Unit = {
 
-    if (UH.exists(_ > this.getHealthPoints)) {
-      Runes.runeOnChar(this, "uh")
-    }
-    if (IH.exists(_ > this.getHealthPoints)) {
-      println("I must heal!")
-      Runes.runeOnChar(this, "ih")
-    }
-    if (exura_sio.exists(_ > this.getHealthPoints)) {
-      Spells.castSpellSlow(s"""exura sio \"${this.characterName}""")
-    }
-    if (exura_vita.exists(_ > this.getHealthPoints)) {
-      Spells.castSpellSlow("exura vita")
-    }
-    if (exura_gran.exists(_ > this.getHealthPoints)) {
-      Spells.castSpellSlow("exura gran")
-    }
-    if (exura.exists(_ > this.getHealthPoints)) {
-        Spells.castSpellSlow("exura")
-    }
+  def startInputHandling(): Unit = {
+    inputHandler = Some(new InputHandler(this.getRobot()))
+    inputHandler.foreach(_.start())
   }
+
+  def stopInputHandling(): Unit = {
+    inputHandler.foreach(_.interrupt())
+    inputHandler = None
+  }
+
+
+
+  def autoHeal(): Unit = {
+
+    if (checkExhaust(this.lastSpellTimestamp)) {
+      if (this.botUhHealHealth != 0
+        && this.botUhHealHealth > this.getHealthPoints
+        && this.botUhHealMana < this.getManaPoints) {
+        RunesPotions.runePotionOnChar(this, "uh")
+        this.setLastSpellTimestamp(System.currentTimeMillis())
+      }
+
+      if (this.botIhHealHealth != 0
+        && this.botIhHealHealth > this.getHealthPoints
+        && this.botIhHealMana < this.getManaPoints) {
+        RunesPotions.runePotionOnChar(this, "ih")
+        this.setLastSpellTimestamp(System.currentTimeMillis())
+      }
+
+      if (this.botHPotionHealHealth != 0
+        && this.botHPotionHealHealth > this.getHealthPoints
+        && this.botHPotionHealMana < this.getManaPoints) {
+        RunesPotions.runePotionOnChar(this, "hp")
+        this.setLastSpellTimestamp(System.currentTimeMillis())
+      }
+
+      if (this.botMPotionHealManaMin != 0
+        && this.botMPotionHealManaMin > this.getManaPoints) {
+        RunesPotions.runePotionOnChar(this, "mp")
+        this.setLastSpellTimestamp(System.currentTimeMillis())
+      }
+
+      if (this.botStrongHealHealth != 0
+        && this.botStrongHealHealth > this.getHealthPoints
+        && this.botStrongHealMana < this.getManaPoints) {
+        Spells.castSpellSlow(this.getRobot(), botStrongHealSpell)
+        this.setLastSpellTimestamp(System.currentTimeMillis)
+      }
+
+      if (this.botLightHealHealth != 0
+        && this.botLightHealHealth > this.getHealthPoints
+        && this.botLightHealMana < this.getManaPoints) {
+        println("I need to heal")
+        pressFKey(this.getRobot(), 3)
+//        Spells.castSpellSlow(botLightHealSpell)
+        this.setLastSpellTimestamp(System.currentTimeMillis())
+      }
+    }
+
+  }
+
+//  def autoheal(exura: Option[Int] = None,
+//               exura_gran: Option[Int] = None,
+//               exura_vita: Option[Int] = None,
+//               exura_sio: Option[Int] = None,
+//               IH: Option[Int] = None,
+//               UH: Option[Int] = None): Unit = {
+//
+//    if (UH.exists(_ > this.getHealthPoints)) {
+//      RunesPotions.runePotionOnChar(this, "uh")
+//    }
+//    if (IH.exists(_ > this.getHealthPoints)) {
+//      println("I must heal!")
+//      RunesPotions.runePotionOnChar(this, "ih")
+//    }
+//    if (exura_sio.exists(_ > this.getHealthPoints)) {
+//      Spells.castSpellSlow(s"""exura sio \"${this.characterName}""")
+//    }
+//    if (exura_vita.exists(_ > this.getHealthPoints)) {
+//      Spells.castSpellSlow("exura vita")
+//    }
+//    if (exura_gran.exists(_ > this.getHealthPoints)) {
+//      Spells.castSpellSlow("exura gran")
+//    }
+//    if (exura.exists(_ > this.getHealthPoints)) {
+//        Spells.castSpellSlow("exura")
+//    }
+//  }
 
   def findCoordinate(croppedImage: Mat, previousCoordinate: Option[(Int, Int, Int)] = None): Unit = {
     val stringList = List("charExperience", "charLevel", "healthPoints", "manaPoints", "soulPoints", "capacityValue", "magicLevel")
@@ -258,6 +332,7 @@ class Player(val windowID: String,
     }
   }
 
+
   def foodStatus(): Unit = {
     var currentTimestamp = getCurrentTimestamp
     var previousMealTimestamp = this.getlastMealTimestamp
@@ -265,17 +340,17 @@ class Player(val windowID: String,
     var difference = ((currentTimestamp - previousMealTimestamp)).toInt
     println(s"Food, ${this.characterName}, diff: ${difference}")
     if (difference > randomNumber(30, 5, 20)) {
-      eatFood(this.getCharWindow())
+      eatFood(this)
     } else if (foodDetection(this.getCharWindow()) == null) {
       println("Food image not found!")
     }
   }
 
-  def eatFood(mainImage: Mat): Unit = {
-    var foodLoc = foodDetection(mainImage)
-    mouseMoveSmooth(foodLoc)
+  def eatFood(characterClass: Player): Unit = {
+    var foodLoc = foodDetection(characterClass.getCharWindow())
+    mouseMoveSmooth(characterClass.getRobot(), foodLoc)
     Thread.sleep(300)
-    rightClick(foodLoc)
+    rightClick(characterClass.getRobot(), foodLoc)
     this.setLastMealTimestamp(System.currentTimeMillis / 1000)
   }
 
@@ -303,7 +378,7 @@ class Player(val windowID: String,
       println(str)
       var tempLoc = getLocationFromImageMidLeft(tempImage, mainImage)
       try {
-        mouseMoveSmooth(tempLoc)
+        mouseMoveSmooth(this.getRobot(), tempLoc)
       } catch {
         case e: Exception =>
           println("Not found: " + e.getMessage)
@@ -311,19 +386,87 @@ class Player(val windowID: String,
 
       // call createRectangle to get the rectangle coordinates
       val rectangleCoords: Option[(Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)], Option[(Int, Int)])] = createRectangle(tempLoc)
-      mouseOverRectangle(rectangleCoords)
+      mouseOverRectangle(this, rectangleCoords)
       var rectangleImage = extractRectangle(mainImage, rectangleCoords)
       saveMatAsPng(mainImage, str)
       this.updateState(str, numberDetection(rectangleImage))
 
     }
   }
-
+  def checkExhaust(timestamp: Long): Boolean = {
+    Math.abs(System.currentTimeMillis() - timestamp) > 2000
+  }
   def updateGeneral(): Unit = {
-    print("Screen update.")
+    print("Screen update.\n")
     updateCharWindow()
-    updateRadarImage()
+//    updateRadarImage()
     checkSkills()
+    autoHeal()
+    Thread.sleep(300)
+  }
+
+
+  def saveClass(): Unit = {
+    val filename = s"classes/playerClasses/${this.characterName}.ser"
+    val outputStream = new ObjectOutputStream(new FileOutputStream(filename))
+
+    // Create a new object with only the variables you want to export
+    val exportObject = new MyClassExport(
+      botLightHealSpell,
+      botLightHealHealth,
+      botLightHealMana,
+      botStrongHealSpell,
+      botStrongHealHealth,
+      botStrongHealMana,
+      botIhHealHealth,
+      botIhHealMana,
+      botUhHealHealth,
+      botUhHealMana,
+      botHPotionHealHealth,
+      botHPotionHealMana,
+      botMPotionHealManaMin
+    )
+
+    outputStream.writeObject(exportObject)
+    outputStream.close()
+  }
+
+  def loadClass(): Unit = {
+    val filename = s"classes/playerClasses/${this.characterName}.ser"
+    val inputStream = new ObjectInputStream(new FileInputStream(filename))
+    val importObject = inputStream.readObject().asInstanceOf[MyClassExport]
+    inputStream.close()
+    // Overwrite the class variables with the loaded values
+    botLightHealSpell = importObject.botLightHealSpell
+    botLightHealHealth = importObject.botLightHealHealth
+    botLightHealMana = importObject.botLightHealMana
+    botStrongHealSpell = importObject.botStrongHealSpell
+    botStrongHealHealth = importObject.botStrongHealHealth
+    botStrongHealMana = importObject.botStrongHealMana
+    botIhHealHealth = importObject.botIhHealHealth
+    botIhHealMana = importObject.botIhHealMana
+    botUhHealHealth = importObject.botUhHealHealth
+    botUhHealMana = importObject.botUhHealMana
+    botHPotionHealHealth = importObject.botHPotionHealHealth
+    botHPotionHealMana = importObject.botHPotionHealMana
+    botMPotionHealManaMin = importObject.botMPotionHealManaMin
   }
 
 }
+
+// Define a new class to hold the variables you want to export
+class MyClassExport(
+                     var botLightHealSpell: String,
+                     var botLightHealHealth: Int,
+                     var botLightHealMana: Int,
+                     var botStrongHealSpell: String,
+                     var botStrongHealHealth: Int,
+                     var botStrongHealMana: Int,
+                     var botIhHealHealth: Int,
+                     var botIhHealMana: Int,
+                     var botUhHealHealth: Int,
+                     var botUhHealMana: Int,
+                     var botHPotionHealHealth: Int,
+                     var botHPotionHealMana: Int,
+                     var botMPotionHealManaMin: Int
+                   ) extends Serializable

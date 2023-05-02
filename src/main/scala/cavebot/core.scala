@@ -37,7 +37,7 @@ object core {
     var matFile =arrayToMat(tempWaypoints)
     saveMatToFile(matFile, "loadedWaypoint")
     var nextMoveLoc = getLocationFromImageMidMatchTempLowConf(matFile, charWindow)
-    leftClick(nextMoveLoc)
+    leftClick(playerClass.getRobot(), nextMoveLoc)
   }
 
   def locateLoot(playerClass: Player): Unit = {
@@ -46,7 +46,7 @@ object core {
     val centerLoc = Some((767,500))
     var chatSettingImage = loadImage("images/screenInfo/chatSettings.png")
     var equipmentAreaPoints = getLocationFromImageRight(chatSettingImage, mainImage)
-    mouseMoveSmooth(equipmentAreaPoints)
+    mouseMoveSmooth(playerClass.getRobot(), equipmentAreaPoints)
     //    var equipmentArea = singleCutWindow(mainImage, equipmentAreaPoints, "right")
 //    var croppedImage = cropImageRect(mainImage, equipmentArea)
     dropLoot(playerClass, equipmentAreaPoints, centerLoc)
@@ -58,9 +58,9 @@ object core {
     var bagImage = loadImage("images/containers/brownBag.png")
 //    var tempLoc = getLocationFromImagePoint(bagImage, mainImage, edgePoint, "right")
     var tempLoc = getLocationFromImageMidMatchTemp(bagImage, playerClass.getCharWindow)
-    mouseMoveSmooth(tempLoc)
+    mouseMoveSmooth(playerClass.getRobot(), tempLoc)
     println("Bag found")
-    rightClick(tempLoc)
+    rightClick(playerClass.getRobot(), tempLoc)
     playerClass.updateCharWindow()
   }
 
@@ -76,13 +76,13 @@ object core {
         None
       } else {
         println(str)
-        mouseDragSmooth(tempLoc, centerLoc)
+        mouseDragSmooth(playerClass.getRobot(), tempLoc, centerLoc)
         playerClass.updateCharWindow()
       }
     }
   }
 
-  def locateLootbag(mainImage: Mat): Unit = {
+  def locateLootbag(playerClass: Player, mainImage: Mat): Unit = {
     var bagWindowImage = loadImage("images/containers/bagWindow.png")
     var bagImage = loadImage("images/containers/brownBag.png")
 //    var center = loadImage("images/screenInfo/center.png")
@@ -102,16 +102,16 @@ object core {
       for (i <- 1 to 7) {
         Thread.sleep(600)
         if (i == 1) {
-          mouseDrag(centerLoc, secondPlace)
+          mouseDrag(playerClass.getRobot(), centerLoc, secondPlace)
         } else {
-          mouseDrag(centerLoc, firstPlace)
+          mouseDrag(playerClass.getRobot(), centerLoc, firstPlace)
         }
       }
 
       var lastPlace = calcLocOffset(firstPlace, 110, 45)
-      mouseMoveSmooth(lastPlace)
+      mouseMoveSmooth(playerClass.getRobot(), lastPlace)
       Thread.sleep(600)
-      rightClick(lastPlace)
+      rightClick(playerClass.getRobot(), lastPlace)
 
     }
   }
