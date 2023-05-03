@@ -26,10 +26,8 @@ import org.opencv.imgproc.Imgproc
 import org.opencv.core.Core
 
 
-@SerialVersionUID(1234L)
+  @SerialVersionUID(1234L)
 class CaveBot(caveBotName: String) extends Serializable {
-  // mutable field to store the list of waypoints
-  var mats: List[Mat] = Nil
   var waypointsList: List[Array[Array[Int]]] = List()
 
   // mutable field to store the list of lootbag itemsss
@@ -43,10 +41,6 @@ class CaveBot(caveBotName: String) extends Serializable {
     waypointsList = waypointsList :+ waypointArray
   }
 
-  //  def addWaypointArray(waypointArray: Array[Array[Int]]): Unit = {
-//    waypointsList = waypointArray :+ waypointsList
-//  }
-
   // method to return the next waypoint from the list in a circular fashion
   def getNextWaypoint(): Option[Array[Array[Int]]] = {
     if (waypointsList.nonEmpty) {
@@ -56,17 +50,6 @@ class CaveBot(caveBotName: String) extends Serializable {
       None
     }
   }
-
-
-
-  //  def getNextWaypoint(): Option[Array[Array[Int]]] = {
-//    if (waypointsList.nonEmpty) {
-//      previousWaypointItem = (previousWaypointItem - 1) % waypointsList.size
-//      Some(waypointsList(previousWaypointItem))
-//    } else {
-//      None
-//    }
-//  }
 
   def getCaveBotName(): String = {
     return caveBotName
@@ -85,8 +68,8 @@ class CaveBot(caveBotName: String) extends Serializable {
     val file = new FileInputStream(filename)
     val in = new ObjectInputStream(file)
     val bot = in.readObject().asInstanceOf[CaveBot]
-    mats = bot.mats
-    waypointsList = bot.waypointsList
+//    mats = bot.mats
+//    waypointsList = bot.waypointsList
     in.close()
     file.close()
   }

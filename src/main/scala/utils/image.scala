@@ -618,7 +618,22 @@ object image {
     pixels
   }
 
+  def matToImage(mat: Mat): BufferedImage = {
+    val bytes = new Array[Byte](mat.total.toInt * mat.channels)
+    mat.get(0, 0, bytes)
+    val bufferedImage = new BufferedImage(mat.width, mat.height, BufferedImage.TYPE_3BYTE_BGR)
+    bufferedImage.getRaster.setDataElements(0, 0, mat.width, mat.height, bytes)
+    bufferedImage
+  }
 
+
+  // Method to convert a Mat to a BufferedImage
+  def matToBufferedImage(mat: Mat): BufferedImage = {
+    val img = new BufferedImage(mat.width, mat.height, BufferedImage.TYPE_3BYTE_BGR)
+    val buf = img.getRaster.getDataBuffer.asInstanceOf[DataBufferByte]
+    mat.get(0, 0, buf.getData)
+    img
+  }
   def arrayToMat(pixels: Array[Array[Int]]): Mat = {
     val height = pixels.length
     val width = pixels(0).length

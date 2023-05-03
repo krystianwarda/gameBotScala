@@ -399,9 +399,9 @@ class Player(val windowID: String,
   def updateGeneral(): Unit = {
     print("Screen update.\n")
     updateCharWindow()
-//    updateRadarImage()
-    checkSkills()
-    autoHeal()
+    updateRadarImage()
+//    checkSkills()
+//    autoHeal()
     Thread.sleep(300)
   }
 

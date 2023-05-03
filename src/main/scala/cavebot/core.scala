@@ -10,14 +10,22 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import org.opencv.core.Rect
 import player.Player
+
+import java.io.{File, FileInputStream, ObjectInputStream}
 //import cavebot.CaveBot
 
 object core {
 
 
-  def recordWaypoints(playerClass: Player, caveBotClass: CaveBot): Unit = {
+  def recordMove(playerClass: Player, caveBotClass: CaveBot): Unit = {
     var radarImage = playerClass.getRadarImage()
-    saveMatToFile(radarImage, "savedWaypoint")
+    var radarArray = matToArray(radarImage)
+    caveBotClass.addWaypointArray(radarArray)
+    println("recorded a step")
+  }
+
+  def recordRope(playerClass: Player, caveBotClass: CaveBot): Unit = {
+    var radarImage = playerClass.getRadarImage()
     var radarArray = matToArray(radarImage)
     caveBotClass.addWaypointArray(radarArray)
     println("recorded a step")
@@ -115,4 +123,41 @@ object core {
 
     }
   }
+
+//  def loadCaveBots(): List[CaveBot] = {
+//        val caveBotList = List(
+//          CaveBot("Cave Bot A", List(Mat("Mat 1"), Mat("Mat 2"), Mat("Mat 3"))),
+//          CaveBot("Cave Bot B", List(Mat("Mat 4"), Mat("Mat 5"), Mat("Mat 6")))
+//        )
+//  }
+
+  def loadCaveBots(): List[CaveBot] = {
+    val directoryPath = "classes/cavebot"
+    val directory = new File(directoryPath)
+    val files = directory.listFiles.filter(_.isFile)
+    println(s"Found ${files.length} files in directory $directoryPath")
+
+    val caveBots = files.flatMap { file =>
+      println(file)
+      val objectInputStream = new ObjectInputStream(new FileInputStream(file))
+      try {
+        objectInputStream.readObject() match {
+          case caveBot: CaveBot => Some(caveBot)
+          case _ => None
+        }
+      } catch {
+        case ex: Exception =>
+          println(s"Error while loading CaveBot from file ${file.getName}: ${ex.getMessage}")
+          None
+      } finally {
+        objectInputStream.close()
+      }
+    }.toList
+    println(s"Loaded ${caveBots.length} CaveBots")
+    caveBots
+  }
+
+
+
+
 }

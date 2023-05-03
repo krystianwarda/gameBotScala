@@ -3,25 +3,33 @@ package userUI
 //import monix.reactive.subjects.Var
 //import monix.reactive.subjects.Var
 import monix.reactive.subjects.Var
+import org.opencv.core.{CvType, Mat, MatOfByte}
+import org.opencv.imgcodecs.Imgcodecs
 import player.Player
 import scalafx.beans.property.ObjectProperty
 
 import scala.swing.TabbedPane._
 import scala.swing._
 import scala.collection.mutable.ArrayBuffer
-import java.awt.{Font, GraphicsEnvironment, GridBagLayout}
-import javax.swing.{DefaultDesktopManager, UIManager}
+import java.awt.{Font, GraphicsEnvironment, GridBagLayout, Image}
+import javax.swing.{BoxLayout, DefaultDesktopManager, DefaultListModel, JList, JScrollPane, UIManager}
 import userUI.UserSettings
 import utils.core.runBot
+import utils.image.{arrayToMat, matToBufferedImage, matToImage}
 
+import java.awt.event.ActionListener
+import java.awt.image.DataBufferByte
+import javax.swing.SpringLayout.Constraints
+import javax.swing.event.ListSelectionListener
 import scala.swing.GridBagPanel.Anchor
+import scala.swing.event.ListSelectionEvent
 //import scala.swing.event.Key.Escape
 //import monix.reactive.{Observable, Observer}
 //import monix.execution.Scheduler.Implicits.global
 //import monix.execution.rstreams.Subscription
 import scala.swing.event.SelectionChanged
 
-import java.awt.event.ActionEvent
+//import java.awt.event.ActionEvent
 import java.beans.PropertyChangeEvent
 //import monix.reactive._
 //import monix.execution.Scheduler.Implicits.global
@@ -32,7 +40,7 @@ import java.beans.PropertyChangeEvent
 //import monix.reactive.Observable
 //import monix.reactive.observers.Subscriber
 import java.awt.{Dimension, Font}
-import java.awt.event.ActionEvent
+//import java.awt.event.ActionEvent
 import java.beans.PropertyChangeEvent
 import javax.swing.{JComboBox, JLabel}
 //import monix.execution.Cancelable
@@ -63,8 +71,21 @@ import scala.swing.Reactions.Reaction
 import scala.swing.event.{ButtonClicked, KeyPressed}
 import scala.swing.event.Key
 import Key.Escape
+import javax.swing._
+import scala.swing._
+import scala.swing.event._
+//import java.awt._
+import java.awt.event._
+import org.opencv.core.Mat
+import org.opencv.imgcodecs.Imgcodecs
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import javax.imageio.ImageIO
+import cavebot.CaveBot
+import java.awt.Image
 
-case class SwingApp(examples: List[player.Player]) extends MainFrame {
+
+case class SwingApp(playerClassList: List[player.Player], caveBotClassList: List[cavebot.CaveBot]) extends MainFrame {
   title = "TibiaYBB - Younger Brother Bot"
   preferredSize = new Dimension(600, 300)
   var runningBot = false
@@ -117,8 +138,8 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
       mPotionHealManaMinVar)
   }
 
-  val exampleNames = examples.map(_.characterName)
-  val exampleMap = examples.map(e => e.characterName -> e).toMap
+  val exampleNames = playerClassList.map(_.characterName)
+  val exampleMap = playerClassList.map(e => e.characterName -> e).toMap
 
   val exampleDropdown = new ComboBox(exampleNames)
 
@@ -160,7 +181,7 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
       val runBotButton = Button("Run Bot") {
         runningBot = true
         Future {
-          runBot(examples, runningBot)
+          runBot(playerClassList, runningBot)
         }
       }
 
@@ -388,7 +409,142 @@ case class SwingApp(examples: List[player.Player]) extends MainFrame {
 
     pages += new TabbedPane.Page("Rune Maker", Component.wrap(new JPanel(new GridBagLayout) {}))
     pages += new TabbedPane.Page("Aim Bot", Component.wrap(new JPanel(new GridBagLayout) {}))
-    pages += new TabbedPane.Page("Cave Bot", Component.wrap(new JPanel(new GridBagLayout) {}))
+    import scala.swing._
+    import scala.swing.event._
+    import javax.swing.ImageIcon
+    import org.opencv.core.{CvType, Mat}
+    import org.opencv.imgcodecs.Imgcodecs
+
+    pages += new TabbedPane.Page("Cave Bot", new GridBagPanel {
+      val caveBotComboBox = new ComboBox(caveBotClassList.map(_.getCaveBotName))
+      val waypointsScrollList = new ListView[Int]()
+      val imageLabel = new Label {
+        preferredSize = new Dimension(120, 140)
+      }
+
+      // Method to update the waypointsScrollList
+      def updateWaypointsList(caveBot: CaveBot): Unit = {
+        waypointsScrollList.listData = caveBot.waypointsList.indices.toList
+      }
+
+      // Method to update the imageLabel with a specific waypoint
+      def updateImage(caveBot: CaveBot, waypointIndex: Int): Unit = {
+        val waypointArray = caveBot.waypointsList(waypointIndex)
+        val mat = arrayToMat(waypointArray)
+        val img = matToBufferedImage(mat)
+        imageLabel.icon = new ImageIcon(img)
+      }
+
+      // Setup UI components
+      layout(caveBotComboBox) = new Constraints {
+        grid = (0, 0)
+        fill = Fill.Horizontal
+      }
+      layout(new ScrollPane(waypointsScrollList)) = new Constraints {
+        grid = (0, 1)
+        fill = Fill.Both
+        weighty = 1
+      }
+      layout(imageLabel) = new Constraints {
+        grid = (1, 1)
+        fill = Fill.None
+        anchor = Anchor.West
+      }
+
+      val actionButtons = List("Move", "Rope", "Stairs", "Ladder", "Shovel").map(new Button(_))
+      for ((button, idx) <- actionButtons.zipWithIndex) {
+        layout(button) = new Constraints {
+          grid = (idx, 2)
+          fill = Fill.Horizontal
+        }
+      }
+
+      // Update UI components when a new CaveBot is selected
+      listenTo(caveBotComboBox.selection)
+      reactions += {
+        case SelectionChanged(`caveBotComboBox`) =>
+          val selectedCaveBot = caveBotClassList(caveBotComboBox.selection.index)
+          updateWaypointsList(selectedCaveBot)
+          if (selectedCaveBot.waypointsList.nonEmpty) {
+            updateImage(selectedCaveBot, 0)
+            waypointsScrollList.selectIndices(0)
+          }
+      }
+
+      // Update the image when a new waypoint index is selected
+      listenTo(waypointsScrollList.selection)
+      reactions += {
+        case SelectionChanged(`waypointsScrollList`) =>
+          val selectedCaveBot = caveBotClassList(caveBotComboBox.selection.index)
+          val selectedWaypointIndex = waypointsScrollList.selection.indices.headOption.getOrElse(-1)
+          if (selectedWaypointIndex >= 0) {
+            updateImage(selectedCaveBot, selectedWaypointIndex)
+          }
+      }
+
+      // Initialize the UI with the first CaveBot
+      if (caveBotClassList.nonEmpty) {
+        val firstCaveBot = caveBotClassList.head
+        updateWaypointsList(firstCaveBot)
+        if (firstCaveBot.waypointsList.nonEmpty) {
+          updateImage(firstCaveBot, 0)
+          waypointsScrollList.selectIndices(0)
+        }
+      }
+    })
+
+
+
+    //
+//    pages += new TabbedPane.Page("Cave Bot", Component.wrap(new JPanel(new GridBagLayout) {
+//      // define the components for the Cave Bot tab
+//      val caveBotDropdown = new ComboBox(caveBotClassList.map(_.getCaveBotName))
+//      val matsList = new ListView((1 to caveBotClassList.head.mats.length).toList)
+//      val matImageLabel = new Label("")
+//      val moveButton = new Button("Move")
+//      val ropeButton = new Button("Rope")
+//      val stairsButton = new Button("Stairs")
+//      val ladderButton = new Button("Ladder")
+//      val shovelButton = new Button("Shovel")
+//
+//      val c = new GridBagConstraints()
+//      c.gridx = 0
+//      c.gridy = 0
+//      c.insets = new Insets(5, 5, 5, 5)
+//      add(caveBotDropdown.peer, c)
+//      c.gridy = 1
+//
+//      add(new ScrollPane(matsList).peer, c)
+//      c.gridy = 2
+//      add(matImageLabel.peer, c)
+//      c.gridy = 3
+//      add(moveButton.peer, c)
+//      c.gridx = 1
+//      add(ropeButton.peer, c)
+//      c.gridx = 2
+//      add(stairsButton.peer, c)
+//      c.gridx = 3
+//      add(ladderButton.peer, c)
+//      c.gridx = 4
+//      add(shovelButton.peer, c)
+//
+//      // define the action listeners for the components
+//      caveBotDropdown.reactions += {
+//        case SelectionChanged(_) =>
+//          val caveBotIndex = caveBotDropdown.selection.index
+//          val mats = caveBotClassList(caveBotIndex).mats
+//          matsList.listData = (1 to mats.length).toList
+//          matImageLabel.icon = null
+//      }
+//      matsList.reactions += {
+//        case SelectionChanged(_) =>
+//          val caveBotIndex = caveBotDropdown.selection.index
+//          val mats = caveBotClassList(caveBotIndex).mats
+//          val matIndex = matsList.selection.items.head - 1
+////          matImageLabel.icon = new ImageIcon(mats(matIndex).getImage().getScaledInstance(120, 140, java.awt.Image.SCALE_SMOOTH))
+//      }
+//    }))
+
 
   }
   updateExample()

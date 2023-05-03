@@ -1,6 +1,6 @@
 //package src.main.scala
-import cavebot.{CaveBot, core}
-import cavebot.core.{followWaypoints, locateLoot, moveToNextWaypoint, recordWaypoints}
+
+import cavebot.core.{followWaypoints, loadCaveBots, locateLoot, moveToNextWaypoint, recordMove}
 import credentials.windowName
 import radar.core.findCharLocation
 import userUI.SwingApp
@@ -50,11 +50,35 @@ import cavebot.CaveBot
 //import userUI.swingApp
 import userUI.ExampleApp
 import player.Example
+
+
 object Main {
 
 
   def main(args: Array[String]): Unit = {
     loadOpenCVSettings()
+
+//     cavebot
+//        val playersList = detectPlayerWindows(windowName)
+//
+//        for (singlePlayer <- playersList) {
+//          var caveBotTestClass = new CaveBot("DarashiaTownTour")
+//          //         create a cavebot path
+//          for (i <- 1 to 20) {
+//            print(i)
+//            singlePlayer.updateGeneral()
+//            recordMove(singlePlayer, caveBotTestClass)
+//            Thread.sleep(3000)
+//          }
+//          caveBotTestClass.saveStateToFile(caveBotTestClass.getCaveBotName())
+//          println("Saved")
+////          Thread.sleep(20000)
+//        }
+//
+
+
+
+// MAIN
     val playersList = detectPlayerWindows(windowName)
 
     for (singlePlayer <- playersList) {
@@ -65,8 +89,8 @@ object Main {
           println("File not found for player: " + singlePlayer.characterName)
       }
     }
-
-    val app = new SwingApp(playersList)
+    var caveBotList = loadCaveBots()
+    val app = new SwingApp(playersList, caveBotList)
     app.visible = true
 
 
@@ -123,18 +147,7 @@ object Main {
 }
 
 
-// cavebot
 
-//        var caveBotTestClass = new CaveBot("testPath")
-////         create a cavebot path
-//        for (i <- 1 to 4) {
-//          singlePlayer.updateGeneral()
-//          recordWaypoints(singlePlayer, caveBotTestClass)
-//          Thread.sleep(5000)
-//        }
-//        caveBotTestClass.saveStateToFile(caveBotTestClass.getCaveBotName())
-//        println("Saved")
-//        Thread.sleep(20000)
 
 //var caveBotTestClass = new CaveBot("testPath")
 //caveBotTestClass.loadStateFromFile("classes/cavebot/testPath.ser")
