@@ -1,5 +1,7 @@
 package player
 //import org.opencv.core.Mats
+import cavebot.CaveBot
+import cavebot.core.followWaypoints
 import com.sun.jna.Union
 import org.opencv.core.Mat
 import player.RunesPotions.runePotionOnChar
@@ -7,7 +9,7 @@ import player.skillsWindow.{createRectangle, numberDetection}
 import radar.core.cutRadarImage
 import utils.InputHandler
 import utils.core.randomDirection
-import utils.image.{extractRectangle, getLocationFromImageMidLeft, loadImage, makeScreenshotMat, mouseOverRectangle, saveMatAsPng}
+import utils.image.{areImagesIdentical, extractRectangle, getLocationFromImageMidLeft, loadImage, makeScreenshotMat, mouseOverRectangle, saveMatAsPng}
 import utils.keyboard.{pressCtrlDirection, pressFKey}
 
 import java.awt.Robot
@@ -27,6 +29,18 @@ class Player(val windowID: String,
              var radarImage: Mat,
              var radarCenterLoc: Option[(Int, Int)],
              var robotInstance: Robot) {
+
+
+  var autoHealEnabled: Boolean = false
+  var runeMakerEnabled: Boolean = false
+  var caveBotEnabled: Boolean = false
+  var radarImagePrev: Mat = radarImage
+  var checkInterval: Int = 0
+  var lastCheckTimestamp: Long = System.currentTimeMillis
+  var characterStaticStatus: Boolean = true
+  var staticStatusCounter: Int = 0
+  var caveBotStatus: String = ""
+  var assignedCaveBotClass: CaveBot = _
 
   // character values
   var charExperience: Int = 0
@@ -85,6 +99,20 @@ class Player(val windowID: String,
 
   def getCharLevel(): Int = {
     return charLevel
+  }
+
+  def updateLastCheck(): Unit = {
+    lastCheckTimestamp = System.currentTimeMillis()
+  }
+  def isCheckNeeded(): Boolean = {
+    val currentTime = System.currentTimeMillis()
+    val timeDiff = currentTime - this.lastCheckTimestamp
+    val checkIntervalMillis = this.checkInterval * 1000
+
+    timeDiff >= checkIntervalMillis
+  }
+  def setCaveBot(caveBot: CaveBot): Unit = {
+    this.assignedCaveBotClass = caveBot
   }
 
   def setThreaad(value: Boolean): Unit = {
@@ -157,6 +185,10 @@ class Player(val windowID: String,
     radarImage = image
   }
 
+  def setRadarImagePrev(image: Mat): Unit = {
+    radarImagePrev = image
+  }
+
   def setRadarCenterLoc(loc: Option[(Int, Int)]): Unit = {
     radarCenterLoc = loc
   }
@@ -184,7 +216,19 @@ class Player(val windowID: String,
   }
 
   def updateRadarImage(): Unit = {
+    setRadarImagePrev(this.radarImage)
     setRadarImage(cutRadarImage(this.getCharWindow()))
+  }
+
+  def checkStaticStatus(): Boolean = {
+    val currentStatus = areImagesIdentical(this.radarImagePrev, this.radarImage)
+    if (currentStatus) {
+      staticStatusCounter += 1
+    } else {
+      staticStatusCounter = 0
+    }
+    characterStaticStatus = currentStatus
+    staticStatusCounter >= 3
   }
 
   def getCenterLoc(): Option[(Int, Int)] = {
@@ -211,82 +255,66 @@ class Player(val windowID: String,
 
 
 
-  def autoHeal(): Unit = {
+  def autoHealFunction(): Unit = {
+    if (autoHealEnabled) {
+      if (checkExhaust(this.lastSpellTimestamp)) {
+        if (this.botUhHealHealth != 0
+          && this.botUhHealHealth > this.getHealthPoints
+          && this.botUhHealMana < this.getManaPoints) {
+          RunesPotions.runePotionOnChar(this, "uh")
+          this.setLastSpellTimestamp(System.currentTimeMillis())
+        }
 
-    if (checkExhaust(this.lastSpellTimestamp)) {
-      if (this.botUhHealHealth != 0
-        && this.botUhHealHealth > this.getHealthPoints
-        && this.botUhHealMana < this.getManaPoints) {
-        RunesPotions.runePotionOnChar(this, "uh")
-        this.setLastSpellTimestamp(System.currentTimeMillis())
-      }
+        if (this.botIhHealHealth != 0
+          && this.botIhHealHealth > this.getHealthPoints
+          && this.botIhHealMana < this.getManaPoints) {
+          RunesPotions.runePotionOnChar(this, "ih")
+          this.setLastSpellTimestamp(System.currentTimeMillis())
+        }
 
-      if (this.botIhHealHealth != 0
-        && this.botIhHealHealth > this.getHealthPoints
-        && this.botIhHealMana < this.getManaPoints) {
-        RunesPotions.runePotionOnChar(this, "ih")
-        this.setLastSpellTimestamp(System.currentTimeMillis())
-      }
+        if (this.botHPotionHealHealth != 0
+          && this.botHPotionHealHealth > this.getHealthPoints
+          && this.botHPotionHealMana < this.getManaPoints) {
+          RunesPotions.runePotionOnChar(this, "hp")
+          this.setLastSpellTimestamp(System.currentTimeMillis())
+        }
 
-      if (this.botHPotionHealHealth != 0
-        && this.botHPotionHealHealth > this.getHealthPoints
-        && this.botHPotionHealMana < this.getManaPoints) {
-        RunesPotions.runePotionOnChar(this, "hp")
-        this.setLastSpellTimestamp(System.currentTimeMillis())
-      }
+        if (this.botMPotionHealManaMin != 0
+          && this.botMPotionHealManaMin > this.getManaPoints) {
+          RunesPotions.runePotionOnChar(this, "mp")
+          this.setLastSpellTimestamp(System.currentTimeMillis())
+        }
 
-      if (this.botMPotionHealManaMin != 0
-        && this.botMPotionHealManaMin > this.getManaPoints) {
-        RunesPotions.runePotionOnChar(this, "mp")
-        this.setLastSpellTimestamp(System.currentTimeMillis())
-      }
+        if (this.botStrongHealHealth != 0
+          && this.botStrongHealHealth > this.getHealthPoints
+          && this.botStrongHealMana < this.getManaPoints) {
+          Spells.castSpellSlow(this.getRobot(), botStrongHealSpell)
+          this.setLastSpellTimestamp(System.currentTimeMillis)
+        }
 
-      if (this.botStrongHealHealth != 0
-        && this.botStrongHealHealth > this.getHealthPoints
-        && this.botStrongHealMana < this.getManaPoints) {
-        Spells.castSpellSlow(this.getRobot(), botStrongHealSpell)
-        this.setLastSpellTimestamp(System.currentTimeMillis)
-      }
-
-      if (this.botLightHealHealth != 0
-        && this.botLightHealHealth > this.getHealthPoints
-        && this.botLightHealMana < this.getManaPoints) {
-        println("I need to heal")
-        pressFKey(this.getRobot(), 3)
-//        Spells.castSpellSlow(botLightHealSpell)
-        this.setLastSpellTimestamp(System.currentTimeMillis())
+        if (this.botLightHealHealth != 0
+          && this.botLightHealHealth > this.getHealthPoints
+          && this.botLightHealMana < this.getManaPoints) {
+          println("I need to heal")
+          pressFKey(this.getRobot(), 3)
+          //        Spells.castSpellSlow(botLightHealSpell)
+          this.setLastSpellTimestamp(System.currentTimeMillis())
+        }
       }
     }
-
   }
 
-//  def autoheal(exura: Option[Int] = None,
-//               exura_gran: Option[Int] = None,
-//               exura_vita: Option[Int] = None,
-//               exura_sio: Option[Int] = None,
-//               IH: Option[Int] = None,
-//               UH: Option[Int] = None): Unit = {
-//
-//    if (UH.exists(_ > this.getHealthPoints)) {
-//      RunesPotions.runePotionOnChar(this, "uh")
-//    }
-//    if (IH.exists(_ > this.getHealthPoints)) {
-//      println("I must heal!")
-//      RunesPotions.runePotionOnChar(this, "ih")
-//    }
-//    if (exura_sio.exists(_ > this.getHealthPoints)) {
-//      Spells.castSpellSlow(s"""exura sio \"${this.characterName}""")
-//    }
-//    if (exura_vita.exists(_ > this.getHealthPoints)) {
-//      Spells.castSpellSlow("exura vita")
-//    }
-//    if (exura_gran.exists(_ > this.getHealthPoints)) {
-//      Spells.castSpellSlow("exura gran")
-//    }
-//    if (exura.exists(_ > this.getHealthPoints)) {
-//        Spells.castSpellSlow("exura")
-//    }
-//  }
+  def caveBotFunction(): Unit = {
+    println("Entering cavebot analysis")
+    if (caveBotEnabled) {
+      println(this.characterName)
+      println("Follow waypoint")
+      if (this.characterStaticStatus) {
+        followWaypoints(this, this.assignedCaveBotClass)
+      }
+
+    }
+  }
 
   def findCoordinate(croppedImage: Mat, previousCoordinate: Option[(Int, Int, Int)] = None): Unit = {
     val stringList = List("charExperience", "charLevel", "healthPoints", "manaPoints", "soulPoints", "capacityValue", "magicLevel")
@@ -398,11 +426,17 @@ class Player(val windowID: String,
   }
   def updateGeneral(): Unit = {
     print("Screen update.\n")
-    updateCharWindow()
     updateRadarImage()
+    updateCharWindow()
+//    updateRadarImage()
 //    checkSkills()
 //    autoHeal()
     Thread.sleep(300)
+  }
+
+  def updateScreen(): Unit = {
+    updateCharWindow()
+    updateRadarImage()
   }
 
 

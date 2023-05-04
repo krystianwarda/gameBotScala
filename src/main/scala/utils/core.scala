@@ -42,23 +42,44 @@ import io.circe._
 import io.circe.generic.semiauto._
 
 object core {
-
+    var isFirstIteration = true
     def runBot(playersList: List[player.Player], runningBot: Boolean): Unit = {
-
         while (runningBot) {
             for (singlePlayer <- playersList) {
-                if (singlePlayer.threadActivation) {
+                if (isFirstIteration) {
                     singlePlayer.saveClass()
-                    singlePlayer.startInputHandling()
-                    singlePlayer.setThreaad(false)
+//                    singlePlayer.assignBotSettings()
                 }
-                maximizeWindow(singlePlayer.windowID)
-                singlePlayer.updateGeneral()
-                println(singlePlayer.getHealthPoints())
-                println(singlePlayer.getManaPoints())
+                if (singlePlayer.isCheckNeeded()) {
+                    println(singlePlayer.characterName)
+                    singlePlayer.autoHealFunction()
+                    singlePlayer.caveBotFunction()
+                    maximizeWindow(singlePlayer.windowID)
+                    singlePlayer.updateGeneral()
+                    singlePlayer.checkStaticStatus()
+                    singlePlayer.updateLastCheck()
+                }
+
+
+
             }
         }
     }
+    //                    if (autoHealCheckbox.selected) {
+    //                        singlePlayer.autoHeal()
+    //                    }
+    //                    if (runeMakerCheckbox.selected) {
+    //                        singlePlayer.runeMaker()
+    //                    }
+    //                    if (caveBotCheckbox.selected) {
+    //                        singlePlayer.caveBot()
+    //                    }
+
+    //                if (singlePlayer.threadActivation) {
+    //
+    //                    singlePlayer.startInputHandling()
+    //                    singlePlayer.setThreaad(false)
+    //                }
 
     def detectPlayerWindows(windowNameSubstring: String): List[Player] = {
         // Search for windows that match the window name substring

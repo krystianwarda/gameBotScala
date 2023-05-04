@@ -41,6 +41,7 @@ class CaveBot(caveBotName: String) extends Serializable {
     waypointsList = waypointsList :+ waypointArray
   }
 
+
   // method to return the next waypoint from the list in a circular fashion
   def getNextWaypoint(): Option[Array[Array[Int]]] = {
     if (waypointsList.nonEmpty) {

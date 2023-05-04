@@ -1,6 +1,6 @@
 package cavebot
 
-import utils.image.{arrayToMat, cropImageRect, fromBytes, getCenterLoc, getCenterPoint, getLocationFromCroppedImage, getLocationFromImage, getLocationFromImageHashMidMatchLowConf, getLocationFromImageMid, getLocationFromImageMidEdgeDetect, getLocationFromImageMidLeft, getLocationFromImageMidMatchTemp, getLocationFromImageMidMatchTempLowConf, getLocationFromImagePoint, getLocationFromImageRight, getSideFromFilename, hashMat, hashit, hashitHex, loadImage, makeScreenshotMat, matToArray, saveMatToFile, singleCutWindow}
+import utils.image.{arrayToMat, cropCenter, cropImageRect, fromBytes, getCenterLoc, getCenterPoint, getLocationFromCroppedImage, getLocationFromImage, getLocationFromImageHashMidMatchLowConf, getLocationFromImageMid, getLocationFromImageMidEdgeDetect, getLocationFromImageMidLeft, getLocationFromImageMidMatchTemp, getLocationFromImageMidMatchTempLowConf, getLocationFromImagePoint, getLocationFromImageRight, getSideFromFilename, hashMat, hashit, hashitHex, loadImage, makeScreenshotMat, matToArray, saveMatToFile, singleCutWindow}
 import org.opencv.core.Mat
 import utils.mouse.{calcLocOffset, leftClick, mouseDrag, mouseDragSmooth, mouseMoveSmooth, rightClick, shiftClick}
 
@@ -16,13 +16,27 @@ import java.io.{File, FileInputStream, ObjectInputStream}
 
 object core {
 
+  // recordMove method
+//  def recordMove(playerClass: Player, caveBotClass: CaveBot): Array[Array[Int]] = {
+//    val radarImage = playerClass.getRadarImage()
+//    val radarArray = matToArray(radarImage)
+//    caveBotClass.addWaypointArray(radarArray)
+//    println("recorded a step")
+//    radarArray
+//  }
 
-  def recordMove(playerClass: Player, caveBotClass: CaveBot): Unit = {
-    var radarImage = playerClass.getRadarImage()
-    var radarArray = matToArray(radarImage)
-    caveBotClass.addWaypointArray(radarArray)
-    println("recorded a step")
+  def recordMove(selectedPlayer: Player, selectedCaveBot: CaveBot): Array[Array[Int]] = {
+    val radarImage = cropCenter(selectedPlayer.getRadarImage(), 60,60)
+    val radarArray = matToArray(radarImage)
+    radarArray
   }
+
+//  def recordMove(playerClass: Player, caveBotClass: CaveBot): Unit = {
+//    var radarImage = playerClass.getRadarImage()
+//    var radarArray = matToArray(radarImage)
+//    caveBotClass.addWaypointArray(radarArray)
+//    println("recorded a step")
+//  }
 
   def recordRope(playerClass: Player, caveBotClass: CaveBot): Unit = {
     var radarImage = playerClass.getRadarImage()
@@ -40,6 +54,7 @@ object core {
       println("No more waypoints.")
     }
   }
+
   def moveToNextWaypoint(playerClass: Player, tempWaypoints: Array[Array[Int]]): Unit = {
     var charWindow = playerClass.getCharWindow()
     var matFile =arrayToMat(tempWaypoints)

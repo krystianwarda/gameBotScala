@@ -1277,6 +1277,29 @@ object image {
     }
   }
 
+  def areImagesIdentical(img1: Mat, img2: Mat): Boolean = {
+    if (img1.size != img2.size || img1.depth != img2.depth) {
+      false
+    } else {
+      val diff = new Mat()
+      Core.compare(img1, img2, diff, Core.CMP_NE)
+      val nonZeroElements = Core.countNonZero(diff.reshape(1))
+      nonZeroElements == 0
+    }
+  }
+
+
+  def cropCenter(sourceImage: Mat, cropWidth: Int, cropHeight: Int): Mat = {
+    val centerX = sourceImage.width() / 2
+    val centerY = sourceImage.height() / 2
+    val startX = centerX - cropWidth / 2
+    val startY = centerY - cropHeight / 2
+
+    val roi = new Rect(startX, startY, cropWidth, cropHeight)
+    val croppedImage = new Mat(sourceImage, roi)
+    croppedImage
+  }
+
   def makeScreenshotMat(windowID: String, characterName: String): Mat = {
     // Create a robot and take a screenshot of the specified window
     val screenSize = Toolkit.getDefaultToolkit.getScreenSize
