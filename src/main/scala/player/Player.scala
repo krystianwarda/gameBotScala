@@ -1,9 +1,10 @@
 package player
 //import org.opencv.core.Mats
 import cavebot.CaveBot
-import cavebot.core.followWaypoints
+import cavebot.core.{detectMonsters, followWaypoints, getBattlePositions}
 import com.sun.jna.Union
-import org.opencv.core.Mat
+import org.opencv.core.{Mat, Point, Rect, Size}
+import org.opencv.imgcodecs.Imgcodecs
 import player.RunesPotions.runePotionOnChar
 import player.skillsWindow.{createRectangle, numberDetection}
 import radar.core.cutRadarImage
@@ -14,6 +15,7 @@ import utils.keyboard.{pressCtrlDirection, pressFKey}
 
 import java.awt.Robot
 import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 //import player.Player2.{capacityValue, charExperience, charLevel, healthPoints, lastMealTimestamp, magicLevel, manaPoints, soulPoints}
 import utils.core.{getCurrentTimestamp, randomNumber}
@@ -39,8 +41,15 @@ class Player(val windowID: String,
   var lastCheckTimestamp: Long = System.currentTimeMillis
   var characterStaticStatus: Boolean = true
   var staticStatusCounter: Int = 0
+  var lastWaypointTimestamp: Long = System.currentTimeMillis
   var caveBotStatus: String = ""
   var assignedCaveBotClass: CaveBot = _
+
+  def updateWaypointStatus(value: Long): Unit = {
+    lastWaypointTimestamp = value
+  }
+
+
 
   // character values
   var charExperience: Int = 0
@@ -113,6 +122,16 @@ class Player(val windowID: String,
   }
   def setCaveBot(caveBot: CaveBot): Unit = {
     this.assignedCaveBotClass = caveBot
+  }
+
+  def caveBotFunction(): Unit = {
+    if (caveBotEnabled) {
+
+
+      if (this.characterStaticStatus && this.checkWaypointStatus()) {
+        followWaypoints(this, this.assignedCaveBotClass)
+      }
+    }
   }
 
   def setThreaad(value: Boolean): Unit = {
@@ -219,6 +238,11 @@ class Player(val windowID: String,
     setRadarImagePrev(this.radarImage)
     setRadarImage(cutRadarImage(this.getCharWindow()))
   }
+  def checkWaypointStatus(): Boolean = {
+    val currentTime = System.currentTimeMillis()
+    val differenceInSeconds = (currentTime - this.lastWaypointTimestamp) / 1000
+    differenceInSeconds > 3
+  }
 
   def checkStaticStatus(): Boolean = {
     val currentStatus = areImagesIdentical(this.radarImagePrev, this.radarImage)
@@ -304,25 +328,36 @@ class Player(val windowID: String,
     }
   }
 
-  def caveBotFunction(): Unit = {
-    println("Entering cavebot analysis")
-    if (caveBotEnabled) {
-      println(this.characterName)
-      println("Follow waypoint")
-      if (this.characterStaticStatus) {
-        followWaypoints(this, this.assignedCaveBotClass)
-      }
-
-    }
-  }
 
   def findCoordinate(croppedImage: Mat, previousCoordinate: Option[(Int, Int, Int)] = None): Unit = {
     val stringList = List("charExperience", "charLevel", "healthPoints", "manaPoints", "soulPoints", "capacityValue", "magicLevel")
   }
+
+  def checkBattle(): Unit = {
+    var mainImage = this.charWindow
+    var battleImage = loadImage("images/battle/battleWindow.png")
+    var battleLoc = getLocationFromImageMidLeft(battleImage, mainImage)
+//    mouseMoveSmooth(this.robotInstance, tempLoc)
+    detectMonsters(getBattlePositions(this.charWindow, battleLoc, 71, 22, 21, 160))
+  }
+
+
+
+//  def saveBattlePositions(matList: List[Mat]): Unit = {
+//    for ((mat, index) <- matList.zipWithIndex) {
+//      val filename = s"battle${index + 1}.png"
+//      Imgcodecs.imwrite(filename, mat)
+//    }
+//  }
+
+
+
+
   def checkSkills(): Unit = {
     // check skills sections
 //    println(this.characterName)
-    var mainImage = loadImage(s"window_${this.characterName}.png")
+    var mainImage = this.charWindow
+//    var mainImage = loadImage(s"window_${this.characterName}.png")
     val stringList = List("charExperience", "charLevel", "healthPoints", "manaPoints", "soulPoints", "capacityValue", "magicLevel")
 
     for (str <- stringList) {

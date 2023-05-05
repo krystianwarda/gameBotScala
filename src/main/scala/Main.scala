@@ -76,22 +76,28 @@ object Main {
 //        }
 //
 
-
-
-// MAIN
+// TEST GROUND
     val playersList = detectPlayerWindows(windowName)
-
     for (singlePlayer <- playersList) {
-      try {
-        singlePlayer.loadClass()
-      } catch {
-        case _: FileNotFoundException =>
-          println("File not found for player: " + singlePlayer.characterName)
-      }
+      singlePlayer.checkBattle()
     }
-    var caveBotList = loadCaveBots()
-    val app = new SwingApp(playersList, caveBotList)
-    app.visible = true
+
+
+
+//// MAIN
+//    val playersList = detectPlayerWindows(windowName)
+//
+//    for (singlePlayer <- playersList) {
+//      try {
+//        singlePlayer.loadClass()
+//      } catch {
+//        case _: FileNotFoundException =>
+//          println("File not found for player: " + singlePlayer.characterName)
+//      }
+//    }
+//    var caveBotList = loadCaveBots()
+//    val app = new SwingApp(playersList, caveBotList)
+//    app.visible = true
 
 
 

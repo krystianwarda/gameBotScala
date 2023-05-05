@@ -1,14 +1,14 @@
 package cavebot
 
 import utils.image.{arrayToMat, cropCenter, cropImageRect, fromBytes, getCenterLoc, getCenterPoint, getLocationFromCroppedImage, getLocationFromImage, getLocationFromImageHashMidMatchLowConf, getLocationFromImageMid, getLocationFromImageMidEdgeDetect, getLocationFromImageMidLeft, getLocationFromImageMidMatchTemp, getLocationFromImageMidMatchTempLowConf, getLocationFromImagePoint, getLocationFromImageRight, getSideFromFilename, hashMat, hashit, hashitHex, loadImage, makeScreenshotMat, matToArray, saveMatToFile, singleCutWindow}
-import org.opencv.core.Mat
+import org.opencv.core.{Mat, Point, Rect, Size}
 import utils.mouse.{calcLocOffset, leftClick, mouseDrag, mouseDragSmooth, mouseMoveSmooth, rightClick, shiftClick}
 
 import scala.io.StdIn
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import org.opencv.core.Rect
+import org.opencv.imgproc.Imgproc
 import player.Player
 
 import java.io.{File, FileInputStream, ObjectInputStream}
@@ -46,10 +46,13 @@ object core {
   }
 
   def followWaypoints(playerClass: Player, caveBotClass: CaveBot): Unit = {
+    println("inside function followWaypoints")
     val nextWaypoint = caveBotClass.getNextWaypoint().getOrElse(Array.empty[Array[Int]])
+    println(s"nextWaypoint: $nextWaypoint") // Debugging line
     if (nextWaypoint.nonEmpty) {
-      moveToNextWaypoint(playerClass, nextWaypoint)
       println("load a step")
+      moveToNextWaypoint(playerClass, nextWaypoint)
+      playerClass.updateWaypointStatus(System.currentTimeMillis)
     } else {
       println("No more waypoints.")
     }
@@ -170,6 +173,70 @@ object core {
     }.toList
     println(s"Loaded ${caveBots.length} CaveBots")
     caveBots
+  }
+
+  def getBattlePositions(charWindow: Mat, battleLoc: Option[(Int, Int)], yOffset: Int, yDiff: Int, a: Int, b: Int): List[Mat] = {
+    battleLoc match {
+      case Some((x, y)) =>
+        val rectangles = new ListBuffer[Mat]()
+        val startPoint = new Point(x, y + yOffset)
+
+        for (i <- 0 until 4) {
+          val newLocY = startPoint.y + i * yDiff
+          val rect = new Rect(new Point(startPoint.x, newLocY), new Size(b, a))
+          val croppedImage = new Mat(charWindow, rect)
+          rectangles += croppedImage
+        }
+
+        rectangles.toList
+
+      case None =>
+        println("Battle location not found.")
+        List.empty[Mat]
+    }
+  }
+  def detectMonsters(battlePositions: List[Mat]): List[String] = {
+    battlePositions.zipWithIndex.map { case (battlePosition, index) =>
+      val wordDetected = battleLetterDetection(battlePosition)
+      if (wordDetected.isEmpty) {
+        println(s"In battle ${index + 1} nothing was found")
+      } else {
+        println(s"In battle ${index + 1}: $wordDetected")
+      }
+      wordDetected
+    }
+  }
+  def battleLetterDetection(mainImg: Mat): String = {
+    // Load main image and letter images
+    val letterPath = "images/battle/letters"
+    val letterFiles = new File(letterPath).listFiles.filter(f => f.getName.matches("^[a-zA-Z][rR]*\\.png$"))
+    val letters: Map[String, Mat] = letterFiles.map(f => (f.getName.dropRight(4), loadImage(f.getAbsolutePath))).toMap
+
+    // Define confidence threshold for matching
+    val confidence: Double = 0.99
+
+    // Loop through all letter images and find matches in the main image
+    val matches = letters.flatMap { case (letter, letterImg) =>
+      val matchMat: Mat = new Mat()
+      Imgproc.matchTemplate(mainImg, letterImg, matchMat, Imgproc.TM_CCOEFF_NORMED)
+
+      val letterLocations = for {
+        row <- 0 until matchMat.rows
+        col <- 0 until matchMat.cols
+        if matchMat.get(row, col)(0) >= confidence
+      } yield (col, letter, row)
+
+      letterLocations
+    }.toSeq
+
+    // Sort matches by x-coordinate
+    val sortedMatches = matches.sortBy(_._1)
+
+    // Combine sorted matches into a single string
+    val wordDetected = new StringBuilder
+    sortedMatches.foreach(m => wordDetected.append(m._2))
+
+    wordDetected.toString()
   }
 
 

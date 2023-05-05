@@ -45,26 +45,26 @@ object core {
     var isFirstIteration = true
     def runBot(playersList: List[player.Player], runningBot: Boolean): Unit = {
         while (runningBot) {
+            println(s"Running bot status: $runningBot") // Debugging line
             for (singlePlayer <- playersList) {
                 if (isFirstIteration) {
                     singlePlayer.saveClass()
-//                    singlePlayer.assignBotSettings()
+                    // singlePlayer.assignBotSettings()
                 }
                 if (singlePlayer.isCheckNeeded()) {
                     println(singlePlayer.characterName)
                     singlePlayer.autoHealFunction()
+                    println("Calling caveBotFunction") // Debugging line
                     singlePlayer.caveBotFunction()
                     maximizeWindow(singlePlayer.windowID)
                     singlePlayer.updateGeneral()
                     singlePlayer.checkStaticStatus()
                     singlePlayer.updateLastCheck()
                 }
-
-
-
             }
         }
     }
+
     //                    if (autoHealCheckbox.selected) {
     //                        singlePlayer.autoHeal()
     //                    }
