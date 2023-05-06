@@ -5,7 +5,7 @@ import org.opencv.core.{Mat, Point, Rect, Size}
 import utils.mouse.{calcLocOffset, leftClick, mouseDrag, mouseDragSmooth, mouseMoveSmooth, rightClick, shiftClick}
 
 import scala.io.StdIn
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import org.opencv.imgproc.Imgproc
@@ -195,51 +195,99 @@ object core {
         List.empty[Mat]
     }
   }
-  def detectMonsters(battlePositions: List[Mat]): List[String] = {
+  def detectMonsters(battlePositions: List[Mat]): List[(String, Boolean)] = {
     battlePositions.zipWithIndex.map { case (battlePosition, index) =>
-      val wordDetected = battleLetterDetection(battlePosition)
-      if (wordDetected.isEmpty) {
-        println(s"In battle ${index + 1} nothing was found")
-      } else {
-        println(s"In battle ${index + 1}: $wordDetected")
-      }
-      wordDetected
+      val (wordDetected: String, monsterMarked: Boolean) = battleLetterDetection(battlePosition)
+//      if (wordDetected.isEmpty) {
+//        println(s"In battle ${index + 1} nothing was found")
+//      } else {
+//        println(s"In battle ${index + 1}: $wordDetected, Marked: $monsterMarked")
+//      }
+      (wordDetected, monsterMarked)
     }
   }
-  def battleLetterDetection(mainImg: Mat): String = {
-    // Load main image and letter images
+
+  def battleLetterDetection(mainImg: Mat): (String, Boolean) = {
     val letterPath = "images/battle/letters"
     val letterFiles = new File(letterPath).listFiles.filter(f => f.getName.matches("^[a-zA-Z][rR]*\\.png$"))
     val letters: Map[String, Mat] = letterFiles.map(f => (f.getName.dropRight(4), loadImage(f.getAbsolutePath))).toMap
 
+    // Remove any null Mat objects
+    val nonNullLetters = letters.filter(_._2 != null)
+
     // Define confidence threshold for matching
     val confidence: Double = 0.99
 
-    // Loop through all letter images and find matches in the main image
-    val matches = letters.flatMap { case (letter, letterImg) =>
-      val matchMat: Mat = new Mat()
-      Imgproc.matchTemplate(mainImg, letterImg, matchMat, Imgproc.TM_CCOEFF_NORMED)
+    def findMatches(lettersToSearch: Map[String, Mat]): Seq[(Int, String, Int, Double, Int)] = {
+      lettersToSearch.flatMap { case (letter, letterImg) =>
+        val matchMat: Mat = new Mat()
+        Imgproc.matchTemplate(mainImg, letterImg, matchMat, Imgproc.TM_CCOEFF_NORMED)
 
-      val letterLocations = for {
-        row <- 0 until matchMat.rows
-        col <- 0 until matchMat.cols
-        if matchMat.get(row, col)(0) >= confidence
-      } yield (col, letter, row)
+        val letterLocations = for {
+          row <- 0 until matchMat.rows
+          col <- 0 until matchMat.cols
+          if matchMat.get(row, col)(0) >= confidence
+        } yield (col, letter, row, matchMat.get(row, col)(0), letterImg.width())
 
-      letterLocations
-    }.toSeq
+        letterLocations
+      }.toSeq
+    }
+
+    def groupNearbyLetters(matches: Seq[(Int, String, Int, Double)], distanceThreshold: Int): Seq[(Int, String, Int, Double)] = {
+      val sortedMatches = matches.sortBy(_._1)
+      val filteredMatches = new ArrayBuffer[(Int, String, Int, Double)]()
+
+      sortedMatches.foreach { currentMatch =>
+        val (x1, letter1, y1, score1) = currentMatch
+        var isOverlapping = false
+
+        filteredMatches.indices.foreach { i =>
+          val (x2, letter2, y2, score2) = filteredMatches(i)
+
+          if (math.abs(x1 - x2) <= distanceThreshold) {
+            isOverlapping = true
+
+            if (score1 > score2) {
+              filteredMatches(i) = currentMatch
+            }
+          }
+        }
+
+        if (!isOverlapping) {
+          filteredMatches.append(currentMatch)
+        }
+      }
+
+      filteredMatches.sortBy(_._1)
+    }
+
+    // Determine the color of the first letter
+    val firstLetterColor = nonNullLetters.keys.find(key => key.length > 1 && findMatches(Map(key -> nonNullLetters(key))).nonEmpty)
+
+    val isRed = firstLetterColor.isDefined
+    val searchLetters = if (isRed) {
+      nonNullLetters.filter(_._1.length > 1)
+    } else {
+      nonNullLetters.filter(_._1.length == 1)
+    }
+
+    val matches = findMatches(searchLetters)
+
+    // Calculate the average width of the detected letters
+    val avgWidth = matches.map(_._5).sum / matches.size.toDouble
+
+    // Group nearby letters and select the one with the highest confidence score
+    val groupedMatches = groupNearbyLetters(matches.map(t => (t._1, t._2, t._3, t._4)), (avgWidth * 0.4).toInt)
+//0.4 mino
 
     // Sort matches by x-coordinate
-    val sortedMatches = matches.sortBy(_._1)
+    val sortedMatches = groupedMatches.sortBy(_._1)
 
     // Combine sorted matches into a single string
     val wordDetected = new StringBuilder
-    sortedMatches.foreach(m => wordDetected.append(m._2))
+    sortedMatches.foreach(m => wordDetected.append(m._2.charAt(0)))
 
-    wordDetected.toString()
+    (wordDetected.toString(), isRed)
   }
-
-
-
 
 }

@@ -338,7 +338,8 @@ class Player(val windowID: String,
     var battleImage = loadImage("images/battle/battleWindow.png")
     var battleLoc = getLocationFromImageMidLeft(battleImage, mainImage)
 //    mouseMoveSmooth(this.robotInstance, tempLoc)
-    detectMonsters(getBattlePositions(this.charWindow, battleLoc, 71, 22, 21, 160))
+    var monsterList = detectMonsters(getBattlePositions(this.charWindow, battleLoc, 71, 22, 21, 160))
+    println(monsterList)
   }
 
 
