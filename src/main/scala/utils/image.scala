@@ -1289,15 +1289,21 @@ object image {
   }
 
 
-  def cropCenter(sourceImage: Mat, cropWidth: Int, cropHeight: Int): Mat = {
-    val centerX = sourceImage.width() / 2
-    val centerY = sourceImage.height() / 2
-    val startX = centerX - cropWidth / 2
-    val startY = centerY - cropHeight / 2
+  def cropCenter(src: Mat, newWidth: Int, newHeight: Int): Mat = {
+    val width = src.cols
+    val height = src.rows
+    val x = (width - newWidth) / 2
+    val y = (height - newHeight) / 2
 
-    val roi = new Rect(startX, startY, cropWidth, cropHeight)
-    val croppedImage = new Mat(sourceImage, roi)
-    croppedImage
+    // Add print statements
+    println(s"src.cols: $width, src.rows: $height")
+    println(s"newWidth: $newWidth, newHeight: $newHeight")
+    println(s"Point x: $x, y: $y")
+
+    // Original problematic line
+    val cropped = new Mat(src, new Rect(new Point(x, y), new Size(newWidth, newHeight)))
+
+    cropped
   }
 
   def makeScreenshotMat(windowID: String, characterName: String): Mat = {

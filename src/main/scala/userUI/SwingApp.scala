@@ -2,6 +2,7 @@ package userUI
 
 //import monix.reactive.subjects.Var
 //import monix.reactive.subjects.Var
+import cavebot.Monsters
 import cavebot.core.recordMove
 import monix.reactive.subjects.Var
 import org.opencv.core.{CvType, Mat, MatOfByte}
@@ -86,7 +87,7 @@ import cavebot.CaveBot
 import java.awt.Image
 
 
-case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList: List[cavebot.CaveBot]) extends MainFrame {
+case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList: List[cavebot.CaveBot], MonstersClass: Monsters) extends MainFrame {
   var caveBotClassList: List[cavebot.CaveBot] = inputCaveBotClassList
 
   title = "TibiaYBB - Younger Brother Bot"
@@ -126,7 +127,7 @@ case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList:
     val strongHealManaVar = strongHealManaField.text.toInt
     val ihHealHealthVar = ihHealManaField.text.toInt
     val ihHealManaVar = ihHealManaField.text.toInt
-    val uhHealHealthVar = uhHealManaField.text.toInt
+    val uhHealHealthVar = uhHealHealthField.text.toInt
     val uhHealManaVar = uhHealManaField.text.toInt
     val hPotionHealHealthVar = hPotionHealHealthField.text.toInt
     val hPotionHealManaVar = hPotionHealManaField.text.toInt
@@ -164,6 +165,7 @@ case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList:
   val updateButton = new Button("Update") {
     reactions += {
       case ButtonClicked(_) =>
+        println("Update button clicked")
         saveExample()
         updateExample()
     }
@@ -171,8 +173,6 @@ case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList:
 
   contents = new TabbedPane {
 
-    import scala.swing.event.Key
-    import Key.Escape
 
     pages += new TabbedPane.Page("Main", new BoxPanel(Orientation.Vertical) {
       contents += exampleDropdown
@@ -245,7 +245,7 @@ case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList:
       val runBotButton = Button("Run Bot") {
         runningBot = true
         Future {
-          runBot(playerClassList, runningBot)
+          runBot(playerClassList, runningBot, MonstersClass)
         }
       }
 
@@ -471,10 +471,6 @@ case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList:
 
     }))
 
-    pages += new TabbedPane.Page("Rune Maker", Component.wrap(new JPanel(new GridBagLayout) {}))
-    pages += new TabbedPane.Page("Aim Bot", Component.wrap(new JPanel(new GridBagLayout) {}))
-
-
 
     pages += new TabbedPane.Page("Cave Bot", new GridBagPanel {
       val caveBotComboBox = new ComboBox(caveBotClassList.map(_.getCaveBotName))
@@ -484,7 +480,7 @@ case class SwingApp(playerClassList: List[player.Player], inputCaveBotClassList:
       val saveCaveBotButton = new Button("Save")
 
       val imageLabel = new Label {
-        preferredSize = new Dimension(60, 60)
+        preferredSize = new Dimension(80, 80)
       }
 
       // Method to update the waypointsScrollList

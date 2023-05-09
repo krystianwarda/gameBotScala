@@ -26,9 +26,10 @@ import org.opencv.imgproc.Imgproc
 import org.opencv.core.Core
 
 
-  @SerialVersionUID(1234L)
+@SerialVersionUID(1235L)
 class CaveBot(caveBotName: String) extends Serializable {
   var waypointsList: List[Array[Array[Int]]] = List()
+//  var allMonstersList: List[String] = List()
 
   // mutable field to store the list of lootbag itemsss
   var lootbagList: List[String] = List()
@@ -41,18 +42,63 @@ class CaveBot(caveBotName: String) extends Serializable {
     waypointsList = waypointsList :+ waypointArray
   }
 
+  // Custom writeObject method for serialization
+//  @throws[IOException]
+//  private def writeObject(out: ObjectOutputStream): Unit = {
+//    out.defaultWriteObject()
+//  }
+//
+//  // Custom readObject method for deserialization
+//  @throws[IOException]
+//  @throws[ClassNotFoundException]
+//  private def readObject(in: ObjectInputStream): Unit = {
+//    in.defaultReadObject()
+//
+//    // Check if allMonstersList exists in the deserialized object
+//    if (allMonstersList == null) {
+//      allMonstersList = List() // Set an empty list if it doesn't exist
+//    }
+//  }
+
 
   // method to return the next waypoint from the list in a circular fashion
+//  def getNextWaypoint(): Option[Array[Array[Int]]] = {
+//    println("Inside getNextWaypoint") // Debugging line
+//    println(s"waypointsList: $waypointsList") // Debugging line
+//    println(s"waypointsList size: ${waypointsList.size}") // Debugging line
+//    println(s"previousWaypointItem: $previousWaypointItem") // Debugging line
+//
+//    if (waypointsList.nonEmpty) {
+//      previousWaypointItem = (previousWaypointItem + 1) % waypointsList.size
+//      println(s"Updated previousWaypointItem: $previousWaypointItem") // Debugging line
+//      val result = Some(waypointsList(previousWaypointItem))
+//      println(s"Returning result: $result") // Debugging line
+//      result
+//    } else {
+//      println("Returning None") // Debugging line
+//      None
+//    }
+//  }
+
   def getNextWaypoint(): Option[Array[Array[Int]]] = {
+    println("Inside getNextWaypoint") // Debugging line
     println(s"waypointsList: $waypointsList") // Debugging line
-    if (waypointsList.nonEmpty) {
+    println(s"waypointsList size: ${waypointsList.size}") // Debugging line
+    println(s"previousWaypointItem: $previousWaypointItem") // Debugging line
+
+    val result = if (waypointsList.nonEmpty) {
       previousWaypointItem = (previousWaypointItem + 1) % waypointsList.size
-      println(s"previousWaypointItem: $previousWaypointItem") // Debugging line
+      println(s"Updated previousWaypointItem: $previousWaypointItem") // Debugging line
       Some(waypointsList(previousWaypointItem))
     } else {
+      println("Returning None") // Debugging line
       None
     }
+
+    println(s"Returning result: $result") // Debugging line
+    result
   }
+
 
   def getCaveBotName(): String = {
     return caveBotName
@@ -67,13 +113,4 @@ class CaveBot(caveBotName: String) extends Serializable {
     file.close()
   }
 
-  def loadStateFromFile(filename: String): Unit = {
-    val file = new FileInputStream(filename)
-    val in = new ObjectInputStream(file)
-    val bot = in.readObject().asInstanceOf[CaveBot]
-//    mats = bot.mats
-//    waypointsList = bot.waypointsList
-    in.close()
-    file.close()
-  }
 }

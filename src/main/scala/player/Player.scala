@@ -1,7 +1,7 @@
 package player
 //import org.opencv.core.Mats
-import cavebot.CaveBot
-import cavebot.core.{detectMonsters, followWaypoints, getBattlePositions}
+import cavebot.{CaveBot, Monsters}
+import cavebot.core.{detectMonsters, followWaypoints, getBattlePositions, monsterMarkedStatus}
 import com.sun.jna.Union
 import org.opencv.core.{Mat, Point, Rect, Size}
 import org.opencv.imgcodecs.Imgcodecs
@@ -12,11 +12,13 @@ import utils.InputHandler
 import utils.core.randomDirection
 import utils.image.{areImagesIdentical, extractRectangle, getLocationFromImageMidLeft, loadImage, makeScreenshotMat, mouseOverRectangle, saveMatAsPng}
 import utils.keyboard.{pressCtrlDirection, pressFKey}
+import utils.mouse.leftClick
 
 import java.awt.Robot
 import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
+import scala.util.control.Breaks.break
 //import player.Player2.{capacityValue, charExperience, charLevel, healthPoints, lastMealTimestamp, magicLevel, manaPoints, soulPoints}
 import utils.core.{getCurrentTimestamp, randomNumber}
 import utils.image.foodDetection
@@ -44,6 +46,12 @@ class Player(val windowID: String,
   var lastWaypointTimestamp: Long = System.currentTimeMillis
   var caveBotStatus: String = ""
   var assignedCaveBotClass: CaveBot = _
+  var battlePosition1: Option[(Int, Int)] = _
+  var battlePosition2: Option[(Int, Int)] = _
+  var battlePosition3: Option[(Int, Int)] = _
+  var battlePosition4: Option[(Int, Int)] = _
+  var battlePosition5: Option[(Int, Int)] = _
+
 
   def updateWaypointStatus(value: Long): Unit = {
     lastWaypointTimestamp = value
@@ -124,10 +132,9 @@ class Player(val windowID: String,
     this.assignedCaveBotClass = caveBot
   }
 
-  def caveBotFunction(): Unit = {
+  def caveBotFunction(monsterClass: Monsters): Unit = {
     if (caveBotEnabled) {
-
-
+      this.checkBattle(monsterClass)
       if (this.characterStaticStatus && this.checkWaypointStatus()) {
         followWaypoints(this, this.assignedCaveBotClass)
       }
@@ -281,10 +288,12 @@ class Player(val windowID: String,
 
   def autoHealFunction(): Unit = {
     if (autoHealEnabled) {
+      println("Gate1")
       if (checkExhaust(this.lastSpellTimestamp)) {
         if (this.botUhHealHealth != 0
           && this.botUhHealHealth > this.getHealthPoints
           && this.botUhHealMana < this.getManaPoints) {
+          println("Gate3")
           RunesPotions.runePotionOnChar(this, "uh")
           this.setLastSpellTimestamp(System.currentTimeMillis())
         }
@@ -333,14 +342,63 @@ class Player(val windowID: String,
     val stringList = List("charExperience", "charLevel", "healthPoints", "manaPoints", "soulPoints", "capacityValue", "magicLevel")
   }
 
-  def checkBattle(): Unit = {
+  def checkBattle(monsterClass: Monsters): Unit = {
     var mainImage = this.charWindow
     var battleImage = loadImage("images/battle/battleWindow.png")
     var battleLoc = getLocationFromImageMidLeft(battleImage, mainImage)
-//    mouseMoveSmooth(this.robotInstance, tempLoc)
-    var monsterList = detectMonsters(getBattlePositions(this.charWindow, battleLoc, 71, 22, 21, 160))
-    println(monsterList)
+    var monsterList = detectMonsters(getBattlePositions(this, battleLoc, 71, 22, 21, 160))
+
+    if (!monsterMarkedStatus(monsterList)) {
+      var foundMonster = false
+      for (((monsterName, _), index) <- monsterList.zipWithIndex if !foundMonster) {
+        if (monsterClass.getMonsterNames().contains(monsterName)) {
+          foundMonster = true
+          index match {
+            case 0 =>
+              this.battlePosition1 match {
+                case Some((x, y)) =>
+                  leftClick(this.robotInstance, Some((x, y)))
+                case None =>
+                  println("Battle position 1 not found.")
+              }
+            case 1 =>
+              this.battlePosition2 match {
+                case Some((x, y)) =>
+                  mouseMoveSmooth(this.robotInstance, Some((x, y)))
+                case None =>
+                  println("Battle position 2 not found.")
+              }
+            // Add more cases for additional battle positions if needed
+            case _ => println("No suitable battle position found.")
+          }
+        }
+      }
+    }
   }
+
+
+  //  def checkBattle(monsterClass: Monsters): Unit = {
+//    var mainImage = this.charWindow
+//    var battleImage = loadImage("images/battle/battleWindow.png")
+//    var battleLoc = getLocationFromImageMidLeft(battleImage, mainImage)
+////    mouseMoveSmooth(this.robotInstance, tempLoc)
+//    var monsterList = detectMonsters(getBattlePositions(this, battleLoc, 71, 22, 21, 160))
+//    if (!monsterMarkedStatus(monsterList)) {
+//      for ((monsterName, _) <- monsterList) {
+//        if (monsterClass.getMonsterNames().contains(monsterName)) {
+//          this.battlePosition1 match {
+//            case Some((x, y)) =>
+//              mouseMoveSmooth(this.robotInstance, Some((x, y)))
+//            // Add any additional actions you want to perform after moving the mouse
+//            case None =>
+//              println("Battle position 1 not found.")
+//          }
+//          // Exit the loop if the monster is found and the mouseMoveSmooth function is called
+//          break
+//        }
+//      }
+//    }
+//  }
 
 
 
@@ -464,8 +522,8 @@ class Player(val windowID: String,
     print("Screen update.\n")
     updateRadarImage()
     updateCharWindow()
-//    updateRadarImage()
-//    checkSkills()
+    updateRadarImage()
+    checkSkills()
 //    autoHeal()
     Thread.sleep(300)
   }

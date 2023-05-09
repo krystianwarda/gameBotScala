@@ -26,7 +26,7 @@ object core {
 //  }
 
   def recordMove(selectedPlayer: Player, selectedCaveBot: CaveBot): Array[Array[Int]] = {
-    val radarImage = cropCenter(selectedPlayer.getRadarImage(), 60,60)
+    val radarImage = cropCenter(selectedPlayer.getRadarImage(), 80,80)
     val radarArray = matToArray(radarImage)
     radarArray
   }
@@ -47,6 +47,7 @@ object core {
 
   def followWaypoints(playerClass: Player, caveBotClass: CaveBot): Unit = {
     println("inside function followWaypoints")
+    println("Calling getNextWaypoint") // Debugging line
     val nextWaypoint = caveBotClass.getNextWaypoint().getOrElse(Array.empty[Array[Int]])
     println(s"nextWaypoint: $nextWaypoint") // Debugging line
     if (nextWaypoint.nonEmpty) {
@@ -57,6 +58,7 @@ object core {
       println("No more waypoints.")
     }
   }
+
 
   def moveToNextWaypoint(playerClass: Player, tempWaypoints: Array[Array[Int]]): Unit = {
     var charWindow = playerClass.getCharWindow()
@@ -148,6 +150,25 @@ object core {
 //          CaveBot("Cave Bot B", List(Mat("Mat 4"), Mat("Mat 5"), Mat("Mat 6")))
 //        )
 //  }
+  def loadMonsterList(filename: String): List[String] = {
+    val file = new File(filename)
+    if (file.exists()) {
+      val inputStream = new ObjectInputStream(new FileInputStream(filename))
+      try {
+        inputStream.readObject().asInstanceOf[List[String]]
+      } catch {
+        case ex: Exception =>
+          println(s"Error while loading monster list from file $filename: ${ex.getMessage}")
+          List() // Return an empty list if there's an error
+      } finally {
+        inputStream.close()
+      }
+    } else {
+      println(s"No monster list file found at $filename")
+      List() // Return an empty list if the file doesn't exist
+    }
+  }
+
 
   def loadCaveBots(): List[CaveBot] = {
     val directoryPath = "classes/cavebot"
@@ -156,7 +177,7 @@ object core {
     println(s"Found ${files.length} files in directory $directoryPath")
 
     val caveBots = files.flatMap { file =>
-      println(file)
+      println(s"Processing file: ${file.getName}")
       val objectInputStream = new ObjectInputStream(new FileInputStream(file))
       try {
         objectInputStream.readObject() match {
@@ -175,34 +196,78 @@ object core {
     caveBots
   }
 
-  def getBattlePositions(charWindow: Mat, battleLoc: Option[(Int, Int)], yOffset: Int, yDiff: Int, a: Int, b: Int): List[Mat] = {
+  def getBattlePositions(playerClass: Player, battleLoc: Option[(Int, Int)], yOffset: Int, yDiff: Int, a: Int, b: Int): List[Mat] = {
     battleLoc match {
       case Some((x, y)) =>
         val rectangles = new ListBuffer[Mat]()
         val startPoint = new Point(x, y + yOffset)
 
-        for (i <- 0 until 4) {
+        for (i <- 0 until 5) {
           val newLocY = startPoint.y + i * yDiff
           val rect = new Rect(new Point(startPoint.x, newLocY), new Size(b, a))
-          val croppedImage = new Mat(charWindow, rect)
+          val croppedImage = new Mat(playerClass.charWindow, rect)
           rectangles += croppedImage
+
+          // Calculate the middle point of the rectangle
+          val middleX = startPoint.x + b / 2
+          val middleY = newLocY + a / 2
+
+          // Assign battle positions to player based on index i
+          i match {
+            case 0 => playerClass.battlePosition1 = Some((middleX.toInt, middleY.toInt))
+            case 1 => playerClass.battlePosition2 = Some((middleX.toInt, middleY.toInt))
+            case 2 => playerClass.battlePosition3 = Some((middleX.toInt, middleY.toInt))
+            case 3 => playerClass.battlePosition4 = Some((middleX.toInt, middleY.toInt))
+            case 4 => playerClass.battlePosition5 = Some((middleX.toInt, middleY.toInt))
+            case _ => // do nothing
+          }
         }
-
         rectangles.toList
-
       case None =>
         println("Battle location not found.")
         List.empty[Mat]
     }
   }
+
+
+//  def getBattlePositions(playerClass: Player, battleLoc: Option[(Int, Int)], yOffset: Int, yDiff: Int, a: Int, b: Int): List[Mat] = {
+//    battleLoc match {
+//      case Some((x, y)) =>
+//        val rectangles = new ListBuffer[Mat]()
+//        val startPoint = new Point(x, y + yOffset)
+//
+//        for (i <- 0 until 5) {
+//          val newLocY = startPoint.y + i * yDiff
+//          val rect = new Rect(new Point(startPoint.x, newLocY), new Size(b, a))
+//          val croppedImage = new Mat(playerClass.charWindow, rect)
+//          rectangles += croppedImage
+//
+//          // Assign battle positions to player based on index i
+//          i match {
+//            case 0 => playerClass.battlePosition1 = Some((startPoint.x.toInt, newLocY.toInt))
+//            case 1 => playerClass.battlePosition2 = Some((startPoint.x.toInt, newLocY.toInt))
+//            case 2 => playerClass.battlePosition3 = Some((startPoint.x.toInt, newLocY.toInt))
+//            case 3 => playerClass.battlePosition4 = Some((startPoint.x.toInt, newLocY.toInt))
+//            case 4 => playerClass.battlePosition5 = Some((startPoint.x.toInt, newLocY.toInt))
+//            case _ => // do nothing
+//          }
+//        }
+//        rectangles.toList
+//      case None =>
+//        println("Battle location not found.")
+//        List.empty[Mat]
+//    }
+//  }
+
+
   def detectMonsters(battlePositions: List[Mat]): List[(String, Boolean)] = {
     battlePositions.zipWithIndex.map { case (battlePosition, index) =>
       val (wordDetected: String, monsterMarked: Boolean) = battleLetterDetection(battlePosition)
-//      if (wordDetected.isEmpty) {
-//        println(s"In battle ${index + 1} nothing was found")
-//      } else {
-//        println(s"In battle ${index + 1}: $wordDetected, Marked: $monsterMarked")
-//      }
+      if (wordDetected.isEmpty) {
+        println(s"In battle ${index + 1} nothing was found")
+      } else {
+        println(s"In battle ${index + 1}: $wordDetected, Marked: $monsterMarked")
+      }
       (wordDetected, monsterMarked)
     }
   }
@@ -290,4 +355,7 @@ object core {
     (wordDetected.toString(), isRed)
   }
 
+  def monsterMarkedStatus(input: List[(String, Boolean)]): Boolean = {
+    input.exists(_._2)
+  }
 }

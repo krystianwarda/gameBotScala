@@ -1,6 +1,7 @@
 //package src.main.scala
 
-import cavebot.core.{followWaypoints, loadCaveBots, locateLoot, moveToNextWaypoint, recordMove}
+import cavebot.Monsters
+import cavebot.core.{followWaypoints, loadCaveBots, loadMonsterList, locateLoot, moveToNextWaypoint, recordMove}
 import credentials.windowName
 import radar.core.findCharLocation
 import userUI.SwingApp
@@ -58,60 +59,35 @@ object Main {
   def main(args: Array[String]): Unit = {
     loadOpenCVSettings()
 
-//     cavebot
-//        val playersList = detectPlayerWindows(windowName)
-//
-//        for (singlePlayer <- playersList) {
-//          var caveBotTestClass = new CaveBot("DarashiaTownTour")
-//          //         create a cavebot path
-//          for (i <- 1 to 20) {
-//            print(i)
-//            singlePlayer.updateGeneral()
-//            recordMove(singlePlayer, caveBotTestClass)
-//            Thread.sleep(3000)
-//          }
-//          caveBotTestClass.saveStateToFile(caveBotTestClass.getCaveBotName())
-//          println("Saved")
-////          Thread.sleep(20000)
-//        }
-//
 
-// TEST GROUND
-    val playersList = detectPlayerWindows(windowName)
-    for (singlePlayer <- playersList) {
-      singlePlayer.checkBattle()
-    }
-
-
-
-//// MAIN
+//// TEST GROUND
 //    val playersList = detectPlayerWindows(windowName)
-//
 //    for (singlePlayer <- playersList) {
-//      try {
-//        singlePlayer.loadClass()
-//      } catch {
-//        case _: FileNotFoundException =>
-//          println("File not found for player: " + singlePlayer.characterName)
-//      }
+//      singlePlayer.checkBattle()
 //    }
-//    var caveBotList = loadCaveBots()
-//    val app = new SwingApp(playersList, caveBotList)
-//    app.visible = true
 
 
 
-    //example App
-//    val examplesList = List(
-//      new player.Example("Alice", 1),
-//      new player.Example("Bob", 2),
-//      new player.Example("Charlie", 3)
-//    )
-//    val exampleApp = ExampleApp(examplesList)
-//    exampleApp.visible = true
+
+// MAIN
+    val playersList = detectPlayerWindows(windowName)
+
+    for (singlePlayer <- playersList) {
+      try {
+        singlePlayer.loadClass()
+      } catch {
+        case _: FileNotFoundException =>
+          println("File not found for player: " + singlePlayer.characterName)
+      }
+    }
+    var caveBotList = loadCaveBots()
+    val monsterList = loadMonsterList("images/battle/monsterList.ser")
+    var monsterClass = new Monsters(monsterList)
+    val app = new SwingApp(playersList, caveBotList, monsterClass)
+    app.visible = true
 
 
-//    val app = new userUI.swingApp
+
 
 
 

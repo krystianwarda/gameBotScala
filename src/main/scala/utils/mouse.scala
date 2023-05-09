@@ -9,7 +9,7 @@ object mouse {
 
   def leftClick(robotInstance: Robot, loc: Option[(Int, Int)]): Unit = {
     loc.foreach { case (x, y) =>
-      robotInstance.mouseMove(x, y)
+      mouseMoveSmooth(robotInstance, Some(x, y))
       robotInstance.mousePress(InputEvent.BUTTON1_DOWN_MASK)
       robotInstance.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
     }
@@ -17,7 +17,7 @@ object mouse {
 
   def rightClick(robotInstance: Robot, loc: Option[(Int, Int)]): Unit = {
     loc.foreach { case (x, y) =>
-      robotInstance.mouseMove(x, y)
+      mouseMoveSmooth(robotInstance, Some(x, y))
       robotInstance.mousePress(InputEvent.BUTTON3_DOWN_MASK)
       robotInstance.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
     }
